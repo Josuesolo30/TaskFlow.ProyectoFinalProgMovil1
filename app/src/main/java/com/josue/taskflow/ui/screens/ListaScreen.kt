@@ -9,8 +9,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -34,9 +39,10 @@ fun ListaScreen(
     onAgregarTarea: (String) -> Unit,
     onCambiarEstado: (Int) -> Unit,
     onAbrirDetalle: (Int) -> Unit,
-    onVolver: () -> Unit
+    onVolver: () -> Unit,
 ) {
-    var nuevaTarea by rememberSaveable { mutableStateOf("") }
+    var mostrarDialogo by rememberSaveable { mutableStateOf(false) }
+    var textoNuevaTarea by rememberSaveable { mutableStateOf("") }
     val estadoLista = rememberLazyListState()
 
     Scaffold(
@@ -49,6 +55,16 @@ fun ListaScreen(
                     }
                 }
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { mostrarDialogo = true }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Agregar tarea"
+                )
+            }
         }
     ) { innerPadding ->
         Column(
@@ -57,29 +73,6 @@ fun ListaScreen(
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            OutlinedTextField(
-                value = nuevaTarea,
-                onValueChange = { nuevaTarea = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Nueva tarea") },
-                singleLine = true
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Button(
-                onClick = {
-                    onAgregarTarea(nuevaTarea)
-                    nuevaTarea = ""
-                },
-                enabled = nuevaTarea.isNotBlank(),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Agregar tarea")
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
             if (tareas.isEmpty()) {
                 Text(
                     text = "Todavía no tienes tareas.",
@@ -111,6 +104,50 @@ fun ListaScreen(
                     }
                 }
             }
+        }
+
+        // Diálogo para agregar una nueva tarea mediante el FloatingActionButton
+        if (mostrarDialogo) {
+            AlertDialog(
+                onDismissRequest = {
+                    mostrarDialogo = false
+                    textoNuevaTarea = ""
+                },
+                title = { Text("Nueva tarea") },
+                text = {
+                    OutlinedTextField(
+                        value = textoNuevaTarea,
+                        onValueChange = { textoNuevaTarea = it },
+                        label = { Text("Título de la tarea") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            if (textoNuevaTarea.isNotBlank()) {
+                                onAgregarTarea(textoNuevaTarea)
+                                textoNuevaTarea = ""
+                                mostrarDialogo = false
+                            }
+                        },
+                        enabled = textoNuevaTarea.isNotBlank()
+                    ) {
+                        Text("Agregar")
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            mostrarDialogo = false
+                            textoNuevaTarea = ""
+                        }
+                    ) {
+                        Text("Cancelar")
+                    }
+                }
+            )
         }
     }
 }

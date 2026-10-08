@@ -1,4 +1,5 @@
 package com.josue.taskflow.ui.screens
+import com.josue.taskflow.ui.components.PanelLab3
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -102,6 +103,9 @@ fun InicioScreen(
             ) {
                 Text("Ver mis tareas")
             }
+            Spacer(modifier = Modifier.height(12.dp))
+
+            PanelLab3()
         }
     }
 }
