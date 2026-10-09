@@ -25,8 +25,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.josue.taskflow.data.Tarea
+import com.josue.taskflow.dominio.model.Tarea
 
+/**
+ * Pantalla de Detalle de tarea. Libres de lógica de estado ("State Down, Events Up").
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetalleScreen(
@@ -118,16 +121,11 @@ fun DetalleScreen(
                         /*
                          * EXPLICACIÓN: DIFERENCIA ENTRE INTENT IMPLÍCITO Y EXPLÍCITO
                          * ---------------------------------------------------------
-                         * - INTENT EXPLÍCITO: Especifica exactamente la clase o componente de destino
-                         *   que debe ejecutarse dentro de la propia aplicación (o paquete específico).
-                         *   Ejemplo: Intent(context, MainActivity::class.java). Se usa principalmente
-                         *   para la navegación interna entre actividades.
+                         * - INTENT EXPLÍCITO: Especifica la clase o componente de destino exacto
+                         *   dentro de la propia aplicación (ej. Intent(context, MainActivity::class.java)).
                          * 
-                         * - INTENT IMPLÍCITO: No especifica una clase de destino concreta. En su lugar,
-                         *   declara una acción genérica que se desea realizar (por ejemplo, ACTION_SEND
-                         *   para compartir información o ACTION_VIEW para abrir una URL). El sistema operativo
-                         *   Android analiza las aplicaciones capaces de responder a esa acción y le permite
-                         *   al usuario elegir mediante el selector de aplicaciones (Intent.createChooser).
+                         * - INTENT IMPLÍCITO: Declara una acción genérica (ej. ACTION_SEND) y permite
+                         *   que el sistema operativo Android consulte a otras apps capaces de responder.
                          */
                         val contenidoACompartir = "Tarea: ${tarea.titulo}\nDescripción: ${tarea.descripcion}\nEstado: ${if (tarea.completada) "Completada" else "Pendiente"}"
 

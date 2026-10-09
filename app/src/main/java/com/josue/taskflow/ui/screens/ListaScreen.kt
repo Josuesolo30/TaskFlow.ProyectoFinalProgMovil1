@@ -29,9 +29,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.josue.taskflow.data.Tarea
+import com.josue.taskflow.dominio.model.Tarea
 import com.josue.taskflow.ui.components.TareaCard
 
+/**
+ * Pantalla de Lista que implementa el principio "State Down, Events Up".
+ * Recibe el estado inmutable desde la capa de Presentación y notifica eventos hacia arriba.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ListaScreen(
@@ -79,7 +83,6 @@ fun ListaScreen(
                     style = MaterialTheme.typography.bodyLarge
                 )
             } else {
-                // LazyColumn crea una lista vertical desplazable.
                 LazyColumn(
                     state = estadoLista,
                     modifier = Modifier
@@ -106,7 +109,6 @@ fun ListaScreen(
             }
         }
 
-        // Diálogo para agregar una nueva tarea mediante el FloatingActionButton
         if (mostrarDialogo) {
             AlertDialog(
                 onDismissRequest = {

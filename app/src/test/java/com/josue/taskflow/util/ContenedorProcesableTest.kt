@@ -1,6 +1,6 @@
 package com.josue.taskflow.util
 
-import com.josue.taskflow.data.Tarea
+import com.josue.taskflow.dominio.model.Tarea
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

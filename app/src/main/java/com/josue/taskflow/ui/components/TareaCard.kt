@@ -15,10 +15,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import com.josue.taskflow.data.Tarea
+import com.josue.taskflow.dominio.model.Tarea
 
 /**
  * Componente reutilizable para mostrar una tarea dentro del LazyColumn.
+ * Recibe datos del modelo de dominio.
  */
 @Composable
 fun TareaCard(

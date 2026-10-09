@@ -1,16 +1,8 @@
 package com.josue.taskflow.data
 
+import com.josue.taskflow.dominio.model.Tarea as DominioTarea
+
 /**
- * Modelo de datos de una tarea.
- * Implementa [Comparable] para permitir operaciones de comparación y ordenamiento en el contenedor genérico.
+ * Typealias para mantener compatibilidad con cualquier referencia histórica.
  */
-data class Tarea(
-    val id: Int,
-    val titulo: String,
-    val descripcion: String,
-    val completada: Boolean = false,
-) : Comparable<Tarea> {
-    override fun compareTo(other: Tarea): Int {
-        return this.id.compareTo(other.id)
-    }
-}
+typealias Tarea = DominioTarea
