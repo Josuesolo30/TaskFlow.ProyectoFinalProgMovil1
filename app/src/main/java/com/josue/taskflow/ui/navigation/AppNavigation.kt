@@ -16,49 +16,81 @@ import com.josue.taskflow.ui.screens.DetalleScreen
 import com.josue.taskflow.ui.screens.InicioScreen
 import com.josue.taskflow.ui.screens.ListaScreen
 
-/**
- * Las rutas se concentran en una sola clase sellada de navegación.
- */
-sealed class Pantalla(val ruta: String) {
+sealed class Pantalla(
+    val ruta: String
+) {
     object Inicio : Pantalla("inicio")
     object Lista : Pantalla("lista")
     object Detalle : Pantalla("detalle/{itemId}") {
-        fun crearRuta(id: Int): String = "detalle/$id"
+        fun crearRuta(id: Int): String {
+            return "detalle/$id"
+        }
     }
 }
 
 @Composable
 fun AppNavigation() {
     val context = LocalContext.current
+
     val tareaViewModel: TareaViewModel = viewModel(
-        factory = TareaViewModelFactory(context.applicationContext)
+        factory = TareaViewModelFactory(
+            context.applicationContext
+        )
     )
+
     val navController = rememberNavController()
 
-    // Estado expuesto por el ViewModel mediante StateFlow (UDF: State Down, Events Up)
+    // Estado de las tareas reales guardadas en Room.
     val uiState by tareaViewModel.uiState.collectAsState()
+
+    // Estado del pipeline del LAB 4.
+    val estadoLab4 by tareaViewModel.estadoLab4.collectAsState()
 
     NavHost(
         navController = navController,
         startDestination = Pantalla.Inicio.ruta
     ) {
-        composable(Pantalla.Inicio.ruta) {
+        composable(
+            route = Pantalla.Inicio.ruta
+        ) {
             InicioScreen(
                 totalTareas = uiState.totalTareas,
                 tareasCompletadas = uiState.completadas,
                 onVerTareas = {
-                    navController.navigate(Pantalla.Lista.ruta)
+                    navController.navigate(
+                        Pantalla.Lista.ruta
+                    )
                 }
             )
         }
 
-        composable(Pantalla.Lista.ruta) {
+        composable(
+            route = Pantalla.Lista.ruta
+        ) {
             ListaScreen(
                 tareas = uiState.tareas,
-                onAgregarTarea = { titulo -> tareaViewModel.agregarTarea(titulo) },
-                onCambiarEstado = { id -> tareaViewModel.cambiarEstadoTarea(id) },
+                estadoLab4 = estadoLab4,
+                onIniciarDemoLab4 = tareaViewModel::iniciarDemoLab4,
+                onFiltroLab4 = tareaViewModel::seleccionarFiltroLab4,
+                onFalloLab4 = tareaViewModel::simularFalloLab4,
+                onErrorLab4 = tareaViewModel::simularErrorLab4,
+                onRecargarLab4 = tareaViewModel::recargarLab4,
+                onCambiarEstadoSimuladoLab4 = tareaViewModel::cambiarEstadoSimuladoLab4,
+                onAbrirDetalleSimuladoLab4 = { id ->
+                    navController.navigate(
+                        Pantalla.Detalle.crearRuta(id)
+                    )
+                },
+                onAgregarTarea = { titulo ->
+                    tareaViewModel.agregarTarea(titulo)
+                },
+                onCambiarEstado = { id ->
+                    tareaViewModel.cambiarEstadoTarea(id)
+                },
                 onAbrirDetalle = { id ->
-                    navController.navigate(Pantalla.Detalle.crearRuta(id))
+                    navController.navigate(
+                        Pantalla.Detalle.crearRuta(id)
+                    )
                 },
                 onVolver = {
                     navController.popBackStack()
@@ -75,11 +107,16 @@ fun AppNavigation() {
             )
         ) { backStack ->
             val id = backStack.arguments?.getInt("itemId") ?: 0
-            val tareaSeleccionada = uiState.tareas.firstOrNull { it.id == id }
+
+            val tareaSeleccionada = uiState.tareas.firstOrNull { tarea ->
+                tarea.id == id
+            }
 
             DetalleScreen(
                 tarea = tareaSeleccionada,
-                onCambiarEstado = { tareaViewModel.cambiarEstadoTarea(id) },
+                onCambiarEstado = {
+                    tareaViewModel.cambiarEstadoTarea(id)
+                },
                 onVolver = {
                     navController.popBackStack()
                 }
