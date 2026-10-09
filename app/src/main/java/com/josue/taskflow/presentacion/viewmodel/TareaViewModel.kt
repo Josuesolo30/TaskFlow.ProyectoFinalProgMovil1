@@ -1,8 +1,10 @@
 package com.josue.taskflow.presentacion.viewmodel
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.josue.taskflow.datos.db.TaskFlowDatabase
 import com.josue.taskflow.datos.repository.TareaRepositoryImpl
 import com.josue.taskflow.dominio.usecase.AgregarTareaUseCase
 import com.josue.taskflow.dominio.usecase.CambiarEstadoTareaUseCase
@@ -17,6 +19,9 @@ import kotlinx.coroutines.launch
 /**
  * Capa de Presentación: ViewModel que administra el estado de la UI
  * e invoca únicamente los Casos de Uso (Use Cases) de la capa de Dominio.
+ * 
+ * Cumple con el requerimiento del Lab 6: Ni los UseCases, ni el ViewModel,
+ * ni los Composables cambian sus firmas o lógica de negocio.
  */
 class TareaViewModel(
     private val obtenerTareasUseCase: ObtenerTareasUseCase,
@@ -53,10 +58,13 @@ class TareaViewModel(
 }
 
 @Suppress("UNCHECKED_CAST")
-class TareaViewModelFactory : ViewModelProvider.Factory {
+class TareaViewModelFactory(
+    private val context: Context,
+) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(TareaViewModel::class.java)) {
-            val repository = TareaRepositoryImpl()
+            val database = TaskFlowDatabase.getDatabase(context)
+            val repository = TareaRepositoryImpl(database.tareaDao())
             val obtenerTareasUseCase = ObtenerTareasUseCase(repository)
             val agregarTareaUseCase = AgregarTareaUseCase(repository)
             val cambiarEstadoTareaUseCase = CambiarEstadoTareaUseCase(repository)

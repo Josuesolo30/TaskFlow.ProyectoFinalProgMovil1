@@ -3,6 +3,7 @@ package com.josue.taskflow.ui.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -27,9 +28,11 @@ sealed class Pantalla(val ruta: String) {
 }
 
 @Composable
-fun AppNavigation(
-    tareaViewModel: TareaViewModel = viewModel(factory = TareaViewModelFactory())
-) {
+fun AppNavigation() {
+    val context = LocalContext.current
+    val tareaViewModel: TareaViewModel = viewModel(
+        factory = TareaViewModelFactory(context.applicationContext)
+    )
     val navController = rememberNavController()
 
     // Estado expuesto por el ViewModel mediante StateFlow (UDF: State Down, Events Up)

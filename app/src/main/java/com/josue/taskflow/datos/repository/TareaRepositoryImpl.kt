@@ -1,64 +1,55 @@
 package com.josue.taskflow.datos.repository
 
+import com.josue.taskflow.datos.db.TareaDao
+import com.josue.taskflow.datos.db.TareaEntity
+import com.josue.taskflow.datos.db.toDomain
 import com.josue.taskflow.dominio.model.Tarea
 import com.josue.taskflow.dominio.repository.TareaRepository
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.receiveAsFlow
 
 /**
- * Capa de Datos: Implementación del repositorio usando una fuente de datos en memoria.
+ * Capa de Datos: Implementación de TareaRepository usando la base de datos Room.
+ * 
+ * Cumple con los requerimientos del Lab 6:
+ * - Reemplaza la fuente en memoria por Room.
+ * - Implementa la misma interfaz TareaRepository de la capa de Dominio expuesta como Flow.
+ * - Incluye un evento one-time con Channel para confirmaciones ("elemento guardado").
  */
-class TareaRepositoryImpl : TareaRepository {
+class TareaRepositoryImpl(
+    private val tareaDao: TareaDao,
+) : TareaRepository {
 
-    private var siguienteId = 4
-
-    private val _tareasFlow = MutableStateFlow(
-        listOf(
-            Tarea(
-                id = 1,
-                titulo = "Estudiar navegación",
-                descripcion = "Repasar NavController, NavHost y las rutas de cada pantalla."
-            ),
-            Tarea(
-                id = 2,
-                titulo = "Preparar el README",
-                descripcion = "Documentar funcionalidades, tecnologías y forma de ejecutar la aplicación.",
-                completada = true
-            ),
-            Tarea(
-                id = 3,
-                titulo = "Probar en el AVD",
-                descripcion = "Ejecutar las tres pantallas y verificar todos los botones."
-            )
-        )
-    )
+    // Canal para eventos one-time de confirmación (ej. "elemento guardado")
+    private val _confirmacionChannel = Channel<String>(Channel.BUFFERED)
+    val confirmacionEventosFlow: Flow<String> = _confirmacionChannel.receiveAsFlow()
 
     override fun obtenerTareas(): Flow<List<Tarea>> {
-        return _tareasFlow.asStateFlow()
-    }
-
-    override suspend fun agregarTarea(titulo: String) {
-        _tareasFlow.update { listaActual ->
-            val nuevaTarea = Tarea(
-                id = siguienteId++,
-                titulo = titulo,
-                descripcion = "Tarea creada por el usuario."
-            )
-            listaActual + nuevaTarea
+        return tareaDao.obtenerTareas().map { listaEntities ->
+            listaEntities.map { entity -> entity.toDomain() }
         }
     }
 
+    override suspend fun agregarTarea(titulo: String) {
+        val nuevaTarea = TareaEntity(
+            titulo = titulo,
+            descripcion = "Tarea guardada en la base de datos Room."
+        )
+        tareaDao.insertarTarea(nuevaTarea)
+        _confirmacionChannel.send("Elemento guardado en Room: '$titulo'")
+    }
+
     override suspend fun cambiarEstadoTarea(id: Int) {
-        _tareasFlow.update { listaActual ->
-            listaActual.map { tarea ->
-                if (tarea.id == id) {
-                    tarea.copy(completada = !tarea.completada)
-                } else {
-                    tarea
-                }
-            }
+        val tareaExistente = tareaDao.obtenerTareaPorId(id)
+        if (tareaExistente != null) {
+            val tareaActualizada = tareaExistente.copy(
+                completada = !tareaExistente.completada
+            )
+            tareaDao.actualizarTarea(tareaActualizada)
+            val estadoText = if (tareaActualizada.completada) "completada" else "pendiente"
+            _confirmacionChannel.send("Estado actualizado a $estadoText (ID: $id)")
         }
     }
 }

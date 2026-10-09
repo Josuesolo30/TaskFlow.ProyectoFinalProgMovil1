@@ -1,6 +1,6 @@
 # TaskFlow - Laboratorios y Proyecto Integrador
 
-Aplicación Android para la gestión de tareas personales, desarrollada con Kotlin, Jetpack Compose y Material 3. Integra las competencias trabajadas en los **Laboratorios 0, 1+2, 3 y 5** del curso.
+Aplicación Android para la gestión de tareas personales, desarrollada con Kotlin, Jetpack Compose y Material 3. Integra las competencias trabajadas en los **Laboratorios 0, 1+2, 3, 5 y 6** del curso.
 
 ---
 
@@ -39,17 +39,28 @@ Aplicación Android para la gestión de tareas personales, desarrollada con Kotl
   - **`repository.TareaRepository`**: Interfaz abstracta con funciones `suspend` y `Flow` (Inversión de Dependencias).
   - **Casos de Uso (`usecase`)**: `ObtenerTareasUseCase`, `AgregarTareaUseCase`, `CambiarEstadoTareaUseCase` implementando `operator fun invoke()`.
 * **Capa de Datos (`com.josue.taskflow.datos`)**:
-  - **`repository.TareaRepositoryImpl`**: Implementación en memoria mediante `MutableStateFlow` de la interfaz de dominio.
+  - **`repository.TareaRepositoryImpl`**: Implementación de la interfaz de dominio.
 * **Capa de Presentación (`com.josue.taskflow.presentacion`)**:
-  - **`viewmodel.TareaViewModel`**: Expone `UiState` mediante `StateFlow` y depende exclusivamente de los Casos de Uso (nunca de `TareaRepositoryImpl` directamente).
+  - **`viewmodel.TareaViewModel`**: Expone `UiState` mediante `StateFlow` y depende exclusivamente de los Casos de Uso.
   - **`state.TareaUiState`**: Estado inmutable para la UI siguiendo el patrón Unidirectional Data Flow (**UDF**).
-  - **Composables**: Los componentes visuales quedan desacoplados de la lógica de negocio aplicando el principio *"State Down, Events Up"*.
+  - **Composables**: Desacoplados de la lógica de negocio applying *"State Down, Events Up"*.
+
+---
+
+### 🟤 Lab 6: Capa de Datos con Room Database (CRUD vía Flow)
+* **Componentes de Room (`com.josue.taskflow.datos.db`)**:
+  - **`TareaEntity`**: Entidad para la tabla SQLite `tareas`, con mappers `toDomain()` y `toEntity()`.
+  - **`TareaDao`**: DAO que expone consultas reactivas mediante `Flow<List<TareaEntity>>` e inserciones/actualizaciones con `suspend`.
+  - **`TaskFlowDatabase`**: Singleton de `RoomDatabase` configurado con prepoblación de datos iniciales.
+* **`TareaRepositoryImpl` con Room**: Sustituye la fuente en memoria por Room consumiendo `TareaDao`.
+* **Aislamiento Arquitectural**: **Ni el UseCase, ni el ViewModel, ni los Composables sufrieron modificaciones en su lógica o firmas**, cumpliendo estrictamente con la Inversión de Dependencias.
+* **Evento One-time con Channel**: Implementado `Channel<String>` en `TareaRepositoryImpl` para emitir eventos de confirmación instantáneos (ej. *"Elemento guardado en Room"*).
 
 ---
 
 ## 📸 Evidencias y Capturas de Pantalla
 
-### Capturas del Flujo de Interfaz (Lab 0 & Lab 5)
+### Capturas del Flujo de Interfaz
 
 | Pantalla de Inicio | Pantalla de Lista | Pantalla de Detalle |
 | :---: | :---: | :---: |
@@ -66,11 +77,12 @@ Muestra del log en Android Studio confirmando la invocación de `cancelAndJoin()
 ## 🛠️ Tecnologías Utilizadas
 
 * **Kotlin 2.x** (Genéricos, Varianza, Reified, Scope Functions, Corrutinas)
+* **Room Database 2.6.1** & **KSP**
 * **Arquitectura MVVM + Clean Architecture**
 * **Unidirectional Data Flow (UDF)** con `StateFlow` y `ViewModel`
 * **Jetpack Compose** & **Material 3**
 * **Navigation Compose 2.9.8**
-* **KotlinX Coroutines** (`suspendCancellableCoroutine`, `cancelAndJoin`)
+* **KotlinX Coroutines & Channels** (`suspendCancellableCoroutine`, `cancelAndJoin`, `Channel.receiveAsFlow()`)
 * **JUnit 4** para pruebas unitarias de la librería genérica
 
 ---
