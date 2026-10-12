@@ -1,41 +1,24 @@
 package com.josue.taskflow.ui.screens
 
 import android.content.Intent
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.josue.taskflow.dominio.model.Tarea
 
-/**
- * Pantalla de Detalle de tarea. Libres de lógica de estado ("State Down, Events Up").
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetalleScreen(
     tarea: Tarea?,
     onCambiarEstado: () -> Unit,
     onVolver: () -> Unit,
+    onGuardarDescripcion: (String) -> Unit
 ) {
     val context = LocalContext.current
 
@@ -55,51 +38,55 @@ fun DetalleScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
                 .padding(20.dp),
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             if (tarea == null) {
-                Text(
-                    text = "No se encontró la tarea.",
-                    style = MaterialTheme.typography.headlineSmall
-                )
+                Text("No se encontró la tarea.")
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Button(onClick = { onVolver() }) {
+                Button(onClick = onVolver) {
                     Text("Regresar")
                 }
             } else {
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(20.dp)) {
-                        Text(
-                            text = tarea.titulo,
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        Text(
-                            text = tarea.descripcion,
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-
-                        Spacer(modifier = Modifier.height(20.dp))
-
-                        Text(
-                            text = if (tarea.completada) {
-                                "Estado: Completada"
-                            } else {
-                                "Estado: Pendiente"
-                            },
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
+                var descripcionEditada by rememberSaveable(
+                    tarea.id,
+                    tarea.descripcion
+                ) {
+                    mutableStateOf(tarea.descripcion)
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Text(
+                    text = tarea.titulo,
+                    style = MaterialTheme.typography.headlineSmall
+                )
+
+                Text(
+                    text = if (tarea.completada) {
+                        "Estado: Completada"
+                    } else {
+                        "Estado: Pendiente"
+                    }
+                )
+
+                OutlinedTextField(
+                    value = descripcionEditada,
+                    onValueChange = { descripcionEditada = it },
+                    label = { Text("Descripción") },
+                    minLines = 4,
+                    maxLines = 8,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Button(
+                    onClick = {
+                        onGuardarDescripcion(descripcionEditada)
+                    },
+                    enabled = descripcionEditada.trim() != tarea.descripcion,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Guardar descripción")
+                }
 
                 Button(
                     onClick = onCambiarEstado,
@@ -114,39 +101,36 @@ fun DetalleScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
-
                 OutlinedButton(
                     onClick = {
-                        /*
-                         * EXPLICACIÓN: DIFERENCIA ENTRE INTENT IMPLÍCITO Y EXPLÍCITO
-                         * ---------------------------------------------------------
-                         * - INTENT EXPLÍCITO: Especifica la clase o componente de destino exacto
-                         *   dentro de la propia aplicación (ej. Intent(context, MainActivity::class.java)).
-                         * 
-                         * - INTENT IMPLÍCITO: Declara una acción genérica (ej. ACTION_SEND) y permite
-                         *   que el sistema operativo Android consulte a otras apps capaces de responder.
-                         */
-                        val contenidoACompartir = "Tarea: ${tarea.titulo}\nDescripción: ${tarea.descripcion}\nEstado: ${if (tarea.completada) "Completada" else "Pendiente"}"
+                        val contenido = """
+                            Tarea: ${tarea.titulo}
+                            Descripción: ${tarea.descripcion}
+                            Estado: ${if (tarea.completada) "Completada" else "Pendiente"}
+                        """.trimIndent()
 
-                        val intentCompartir = Intent(Intent.ACTION_SEND).apply {
+                        val intent = Intent(Intent.ACTION_SEND).apply {
                             type = "text/plain"
                             putExtra(Intent.EXTRA_SUBJECT, tarea.titulo)
-                            putExtra(Intent.EXTRA_TEXT, contenidoACompartir)
+                            putExtra(Intent.EXTRA_TEXT, contenido)
                         }
 
-                        val chooser = Intent.createChooser(intentCompartir, "Compartir tarea con...")
-                        context.startActivity(chooser)
+                        context.startActivity(
+                            Intent.createChooser(
+                                intent,
+                                "Compartir tarea con..."
+                            )
+                        )
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Share,
-                        contentDescription = "Compartir",
-                        modifier = Modifier.padding(end = 8.dp)
-                    )
                     Text("Compartir")
                 }
+
+                Text(
+                    text = "Compartir utiliza la descripción guardada.",
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
         }
     }

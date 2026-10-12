@@ -1,5 +1,6 @@
 package com.josue.taskflow.ui.screens
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -46,13 +47,23 @@ fun ListaScreen(
     onRecargarLab4: () -> Unit,
     onCambiarEstadoSimuladoLab4: (Int) -> Unit,
     onAbrirDetalleSimuladoLab4: (Int) -> Unit,
-    onAgregarTarea: (String) -> Unit,
+    onAgregarTarea: (String, String) -> Unit,
     onCambiarEstado: (Int) -> Unit,
     onAbrirDetalle: (Int) -> Unit,
-    onVolver: () -> Unit,
+    onVolver: () -> Unit
 ) {
-    var mostrarDialogo by rememberSaveable { mutableStateOf(false) }
-    var textoNuevaTarea by rememberSaveable { mutableStateOf("") }
+    var mostrarDialogo by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    var textoNuevaTarea by rememberSaveable {
+        mutableStateOf("")
+    }
+
+    var descripcionNuevaTarea by rememberSaveable {
+        mutableStateOf("")
+    }
+
     val estadoLista = rememberLazyListState()
 
     Scaffold(
@@ -92,8 +103,10 @@ fun ListaScreen(
                     falloTemporal = onFalloLab4,
                     errorPersistente = onErrorLab4,
                     recargar = onRecargarLab4,
-                    onCambiarEstadoSimulado = onCambiarEstadoSimuladoLab4,
-                    onAbrirDetalleSimulado = onAbrirDetalleSimuladoLab4
+                    onCambiarEstadoSimulado =
+                        onCambiarEstadoSimuladoLab4,
+                    onAbrirDetalleSimulado =
+                        onAbrirDetalleSimuladoLab4
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -131,23 +144,54 @@ fun ListaScreen(
                 onDismissRequest = {
                     mostrarDialogo = false
                     textoNuevaTarea = ""
+                    descripcionNuevaTarea = ""
                 },
-                title = { Text("Nueva tarea") },
+                title = {
+                    Text("Nueva tarea")
+                },
                 text = {
-                    OutlinedTextField(
-                        value = textoNuevaTarea,
-                        onValueChange = { textoNuevaTarea = it },
-                        label = { Text("Título de la tarea") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    Column {
+                        OutlinedTextField(
+                            value = textoNuevaTarea,
+                            onValueChange = {
+                                textoNuevaTarea = it
+                            },
+                            label = {
+                                Text("Título de la tarea")
+                            },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(
+                            modifier = Modifier.height(12.dp)
+                        )
+
+                        OutlinedTextField(
+                            value = descripcionNuevaTarea,
+                            onValueChange = {
+                                descripcionNuevaTarea = it
+                            },
+                            label = {
+                                Text("Descripción")
+                            },
+                            minLines = 3,
+                            maxLines = 5,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 },
                 confirmButton = {
                     Button(
                         onClick = {
                             if (textoNuevaTarea.isNotBlank()) {
-                                onAgregarTarea(textoNuevaTarea)
+                                onAgregarTarea(
+                                    textoNuevaTarea,
+                                    descripcionNuevaTarea
+                                )
+
                                 textoNuevaTarea = ""
+                                descripcionNuevaTarea = ""
                                 mostrarDialogo = false
                             }
                         },
@@ -161,6 +205,7 @@ fun ListaScreen(
                         onClick = {
                             mostrarDialogo = false
                             textoNuevaTarea = ""
+                            descripcionNuevaTarea = ""
                         }
                     ) {
                         Text("Cancelar")

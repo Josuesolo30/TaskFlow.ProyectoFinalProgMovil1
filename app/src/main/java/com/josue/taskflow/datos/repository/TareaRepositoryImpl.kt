@@ -1,5 +1,6 @@
 package com.josue.taskflow.datos.repository
 
+
 import com.josue.taskflow.datos.db.TareaDao
 import com.josue.taskflow.datos.db.TareaEntity
 import com.josue.taskflow.datos.db.toDomain
@@ -12,44 +13,86 @@ import kotlinx.coroutines.flow.receiveAsFlow
 
 /**
  * Capa de Datos: Implementación de TareaRepository usando la base de datos Room.
- * 
+ *
  * Cumple con los requerimientos del Lab 6:
  * - Reemplaza la fuente en memoria por Room.
  * - Implementa la misma interfaz TareaRepository de la capa de Dominio expuesta como Flow.
  * - Incluye un evento one-time con Channel para confirmaciones ("elemento guardado").
  */
+
+
+/**
+ * Repositorio de tareas con persistencia en Room.
+ */
 class TareaRepositoryImpl(
-    private val tareaDao: TareaDao,
+    private val tareaDao: TareaDao
 ) : TareaRepository {
 
-    // Canal para eventos one-time de confirmación (ej. "elemento guardado")
-    private val _confirmacionChannel = Channel<String>(Channel.BUFFERED)
-    val confirmacionEventosFlow: Flow<String> = _confirmacionChannel.receiveAsFlow()
+    private val confirmacionChannel =
+        Channel<String>(Channel.BUFFERED)
+
+    val confirmacionEventosFlow: Flow<String> =
+        confirmacionChannel.receiveAsFlow()
 
     override fun obtenerTareas(): Flow<List<Tarea>> {
-        return tareaDao.obtenerTareas().map { listaEntities ->
-            listaEntities.map { entity -> entity.toDomain() }
+        return tareaDao.obtenerTareas().map { entidades ->
+            entidades.map { entidad ->
+                entidad.toDomain()
+            }
         }
     }
 
-    override suspend fun agregarTarea(titulo: String) {
-        val nuevaTarea = TareaEntity(
-            titulo = titulo,
-            descripcion = "Tarea guardada en la base de datos Room."
+    override suspend fun agregarTarea(
+        titulo: String,
+        descripcion: String
+    ) {
+        tareaDao.insertarTarea(
+            TareaEntity(
+                titulo = titulo,
+                descripcion = descripcion
+            )
         )
-        tareaDao.insertarTarea(nuevaTarea)
-        _confirmacionChannel.send("Elemento guardado en Room: '$titulo'")
+
+        confirmacionChannel.send(
+            "Tarea guardada: $titulo"
+        )
     }
 
     override suspend fun cambiarEstadoTarea(id: Int) {
-        val tareaExistente = tareaDao.obtenerTareaPorId(id)
-        if (tareaExistente != null) {
-            val tareaActualizada = tareaExistente.copy(
-                completada = !tareaExistente.completada
-            )
-            tareaDao.actualizarTarea(tareaActualizada)
-            val estadoText = if (tareaActualizada.completada) "completada" else "pendiente"
-            _confirmacionChannel.send("Estado actualizado a $estadoText (ID: $id)")
+        val tarea = tareaDao.obtenerTareaPorId(id) ?: return
+
+        val actualizada = tarea.copy(
+            completada = !tarea.completada
+        )
+
+        tareaDao.actualizarTarea(actualizada)
+
+        val estado = if (actualizada.completada) {
+            "completada"
+        } else {
+            "pendiente"
         }
+
+        confirmacionChannel.send(
+            "Tarea marcada como $estado"
+        )
+    }
+
+    override suspend fun actualizarDescripcion(
+        id: Int,
+        descripcion: String
+    ) {
+        val tarea = tareaDao.obtenerTareaPorId(id) ?: return
+
+        tareaDao.actualizarTarea(
+            tarea.copy(descripcion = descripcion)
+        )
+
+        confirmacionChannel.send(
+            "Descripción guardada"
+        )
     }
 }
+
+
+

@@ -1,6 +1,6 @@
 # TaskFlow - Laboratorios y Proyecto Integrador
 
-Aplicación Android para la gestión de tareas personales, desarrollada con Kotlin, Jetpack Compose y Material 3. Integra las competencias trabajadas en los **Laboratorios 0, 1+2, 3, 5 y 6** del curso.
+Aplicación Android para la gestión de tareas personales, desarrollada con Kotlin, Jetpack Compose y Material 3. Integra las competencias trabajadas en los **Laboratorios 0, 1+2, 3, 4, 5 y 6** del curso.
 
 ---
 
@@ -33,44 +33,103 @@ Aplicación Android para la gestión de tareas personales, desarrollada con Kotl
 
 ---
 
+### 🔴 Lab 4: Flow y Programación Reactiva
+Se implementan dos fuentes simuladas: una emite listas de tareas y otra emite filtros en momentos diferentes.
+
+* **Pipeline de Operadores Flow**:
+  - `filter`: Descarta emisiones con identificadores duplicados.
+  - `map`: Limpia títulos y ordena las tareas.
+  - `combine`: Combina las tareas con el filtro más reciente.
+  - `transform`: Convierte el resultado en contenido o lista vacía.
+  - `retry`: Realiza hasta dos reintentos ante `IOException`.
+  - `catch`: Transforma el error final en un estado visible.
+  - `stateIn`: Expone el resultado como `StateFlow`.
+* **Estados en la Interfaz**: Manejo reactivo de estados **Cargando**, **Contenido**, **Vacía** y **Error**.
+* **Ruta Independiente**: Las tareas simuladas del Lab 4 cuentan con una pantalla y flujo reactivo propio.
+
+---
+
 ### 🟣 Lab 5: MVVM + Clean Architecture (Presentación, Dominio y Datos)
 * **Capa de Dominio (`com.josue.taskflow.dominio`)**:
   - **`model.Tarea`**: Modelo de datos de Kotlin puro sin dependencias de Android, Room o Retrofit.
   - **`repository.TareaRepository`**: Interfaz abstracta con funciones `suspend` y `Flow` (Inversión de Dependencias).
-  - **Casos de Uso (`usecase`)**: `ObtenerTareasUseCase`, `AgregarTareaUseCase`, `CambiarEstadoTareaUseCase` implementando `operator fun invoke()`.
+  - **Casos de Uso (`usecase`)**: `ObtenerTareasUseCase`, `AgregarTareaUseCase`, `CambiarEstadoTareaUseCase` e `ActualizarDescripcionUseCase` implementando `operator fun invoke()`.
 * **Capa de Datos (`com.josue.taskflow.datos`)**:
-  - **`repository.TareaRepositoryImpl`**: Implementación de la interfaz de dominio.
+  - **`repository.TareaRepositoryImpl`**: Implementación de la interfaz de dominio conectada a la fuente de datos.
 * **Capa de Presentación (`com.josue.taskflow.presentacion`)**:
   - **`viewmodel.TareaViewModel`**: Expone `UiState` mediante `StateFlow` y depende exclusivamente de los Casos de Uso.
   - **`state.TareaUiState`**: Estado inmutable para la UI siguiendo el patrón Unidirectional Data Flow (**UDF**).
-  - **Composables**: Desacoplados de la lógica de negocio applying *"State Down, Events Up"*.
+  - **Composables**: Desacoplados de la lógica de negocio aplicando *"State Down, Events Up"*.
 
 ---
 
-### 🟤 Lab 6: Capa de Datos con Room Database (CRUD vía Flow)
+### 🟤 Lab 6: Persistencia con Room y Consultas Reactivas con Flow
 * **Componentes de Room (`com.josue.taskflow.datos.db`)**:
-  - **`TareaEntity`**: Entidad para la tabla SQLite `tareas`, con mappers `toDomain()` y `toEntity()`.
-  - **`TareaDao`**: DAO que expone consultas reactivas mediante `Flow<List<TareaEntity>>` e inserciones/actualizaciones con `suspend`.
-  - **`TaskFlowDatabase`**: Singleton de `RoomDatabase` configurado con prepoblación de datos iniciales.
-* **`TareaRepositoryImpl` con Room**: Sustituye la fuente en memoria por Room consumiendo `TareaDao`.
-* **Aislamiento Arquitectural**: **Ni el UseCase, ni el ViewModel, ni los Composables sufrieron modificaciones en su lógica o firmas**, cumpliendo estrictamente con la Inversión de Dependencias.
-* **Evento One-time con Channel**: Implementado `Channel<String>` en `TareaRepositoryImpl` para emitir eventos de confirmación instantáneos (ej. *"Elemento guardado en Room"*).
+  - **`TareaEntity`**: Entidad de la tabla `tareas`, con los campos `id`, `titulo`, `descripcion` y `completada`. Incluye mappers `toDomain()` y `toEntity()`.
+  - **`TareaDao`**: Expone consultas mediante `Flow<List<TareaEntity>>` e inserciones/actualizaciones con funciones `suspend`.
+  - **`TaskFlowDatabase`**: Singleton de `RoomDatabase`. Inserta tareas iniciales al crear la base de datos.
+* **Repositorio con Room**:
+  - `TareaRepositoryImpl` implementa `TareaRepository` utilizando `TareaDao`.
+  - Permite crear tareas con título y descripción, consultar tareas, cambiar su estado y actualizar su descripción de forma persistente.
+* **Separación de Responsabilidades**:
+  - El dominio conserva su independencia de Room.
+  - `TareaViewModelFactory` configura el repositorio de Room y lo conecta con los casos de uso.
+* **Confirmaciones con Channel**:
+  - `TareaRepositoryImpl` emite mensajes mediante `Channel<String>` expuestos como `Flow`.
+  - `AppNavigation` observa el flujo del ViewModel y muestra confirmaciones flotantes al crear una tarea, cambiar su estado o guardar su descripción.
+* **Verificación de Persistencia y Base de Datos**:
+  - Persistencia comprobada tras cerrar/abrir la app y rotación de pantalla.
+  - Captura de la tabla `tareas` verificada en Database Inspector.
 
 ---
 
 ## 📸 Evidencias y Capturas de Pantalla
 
-### Capturas del Flujo de Interfaz
-
+### 📱 Flujo Principal de la Aplicación
 | Pantalla de Inicio | Pantalla de Lista | Pantalla de Detalle |
 | :---: | :---: | :---: |
 | ![Inicio](screenshots/inicio.png) | ![Lista](screenshots/lista.png) | ![Detalle](screenshots/detalle.png) |
 
-### Evidencia en Logs de Cancelación en Corrutinas (Lab 3)
+---
 
+### 🟠 Lab 3: Concurrencia y Corrutinas
 Muestra del log en Android Studio confirmando la invocación de `cancelAndJoin()`, la cancelación del polling (`CANCELLED T-TIGRES`) y la liberación completa de recursos (`activeCalls=0`):
 
 ![Evidencia Cancelación Lab 3](screenshots/lab3_cancellation.png)
+
+---
+
+### 🔴 Lab 4: Programación Reactiva con Flow
+
+#### Diagrama de Emisiones y Combinación (Marble Diagram)
+![Diagrama Flow Lab 4](screenshots/lab4_marbles.png)
+
+#### Estados de la Interfaz en Lab 4
+| Estado Contenido (Filtro) | Estado Vacío | Estado Error |
+| :---: | :---: | :---: |
+| ![Contenido Lab 4](screenshots/lab4_contenido.png) | ![Vacío Lab 4](screenshots/lab4_vacia.png) | ![Error Lab 4](screenshots/lab4_error.png) |
+
+#### Evidencia de Operadores (`retry` y `catch`) en Logcat
+![Logs Logcat Lab 4](screenshots/lab4_logs.png)
+
+---
+
+### 🟣 Lab 5: Arquitectura Limpia (Clean Architecture)
+Estructura del proyecto organizada en capas independientes (**datos**, **dominio** y **presentación**):
+
+![Estructura Clean Architecture Lab 5](screenshots/lab5_capas.png)
+
+---
+
+### 🟤 Lab 6: Persistencia con Room y Confirmaciones con Channel
+
+#### Persistencia y Confirmación en la UI
+| Tareas Persistidas en Room | Mensaje de Confirmación (Channel) | Detalle y Edición de Tarea |
+| :---: | :---: | :---: |
+| ![Lista Room](screenshots/lab6_despues.png) | ![Confirmación Channel](screenshots/lab6_confirmacion.png) | ![Detalle Edición](screenshots/lab6_antes.png) |
+
+#### Inspección de la Base de Datos SQLite (Database Inspector)
+![Database Inspector Room](screenshots/lab6_room.png)
 
 ---
 
