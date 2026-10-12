@@ -160,6 +160,27 @@ Estructura del proyecto organizada en capas independientes (**datos**, **dominio
    ```
 5. Para ejecutar la aplicación en el emulador: seleccionar el módulo `app` y presionar **Run** (Shift + F10).
 
+## 🤖 Política de Uso de Inteligencia Artificial (Declaración Explícita)
+
+De acuerdo con las directrices académicas de transparencia, se declara explícitamente el uso de herramientas de **Inteligencia Artificial Generativa** como asistente de desarrollo durante la realización de este proyecto.
+
+### 🛠️ Herramientas Utilizadas
+* **Agentes de IA / Asistentes en Android Studio**: Utilizados como herramienta de apoyo y *Pair Programmer*.
+
+### 📋 Alcance y Casos de Uso Específicos
+1. **Depuración de Entorno y Compilación**:
+   * Diagnóstico del error de conexión con el demonio de compilación de Kotlin (`Could not connect to Kotlin compile daemon`).
+   * Ajuste de propiedades en `gradle.properties` (`kotlin.compiler.execution.strategy=in-process`).
+2. **Documentación y Organización del Entregable**:
+   * Redacción, maquetación en Markdown y estructura pedagógica del documento `README.md`.
+   * Integración y referencia de las capturas de pantalla de evidencia para los Laboratorios 3, 4, 5 y 6.
+3. **Revisión de Código y Buenas Prácticas**:
+   * Verificación de la estructura de **Clean Architecture** (Dominio, Datos, Presentación) y manejo reactivo de estados con `StateFlow` y `Channel`.
+   * Sugerencia de buenas prácticas en Kotlin, Corrutinas y Jetpack Compose.
+
+### 🛡️ Declaración de Responsabilidad y Autoría
+Todo el código generado o sugerido con apoyo de IA fue revisado, probado, comprendido y validado manualmente por el autor (**Josue Rafael Piña Fermin**), garantizando que la lógica de negocio, las pruebas unitarias y el comportamiento de la aplicación en el emulador cumplan con todos los requerimientos asignados.
+
 ---
 
 ## 👤 Autor
