@@ -1,5 +1,4 @@
 package com.josue.taskflow.ui.screens
-import com.josue.taskflow.ui.components.PanelLab3
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -31,9 +30,9 @@ import androidx.compose.ui.unit.dp
 fun InicioScreen(
     totalTareas: Int,
     tareasCompletadas: Int,
+    tareasPendientes: Int,
     onVerTareas: () -> Unit
 ) {
-    // rememberSaveable conserva el nombre incluso durante una rotación.
     var nombre by rememberSaveable { mutableStateOf("") }
 
     Scaffold(
@@ -51,11 +50,7 @@ fun InicioScreen(
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = if (nombre.isBlank()) {
-                    "Organiza tu día"
-                } else {
-                    "Hola, $nombre"
-                },
+                text = if (nombre.isBlank()) "Organiza tu día" else "Hola, $nombre",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -63,7 +58,7 @@ fun InicioScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Agrega tareas, completa actividades y consulta sus detalles.",
+                text = "Crea, gestiona y completa tus tareas personales de forma eficiente.",
                 style = MaterialTheme.typography.bodyLarge
             )
 
@@ -81,7 +76,7 @@ fun InicioScreen(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 ResumenCard(
                     titulo = "Total",
@@ -89,7 +84,12 @@ fun InicioScreen(
                     modifier = Modifier.weight(1f)
                 )
                 ResumenCard(
-                    titulo = "Completadas",
+                    titulo = "Pendientes",
+                    valor = tareasPendientes,
+                    modifier = Modifier.weight(1f)
+                )
+                ResumenCard(
+                    titulo = "Hechas",
                     valor = tareasCompletadas,
                     modifier = Modifier.weight(1f)
                 )
@@ -103,9 +103,6 @@ fun InicioScreen(
             ) {
                 Text("Ver mis tareas")
             }
-            Spacer(modifier = Modifier.height(12.dp))
-
-            PanelLab3()
         }
     }
 }
@@ -117,7 +114,7 @@ private fun ResumenCard(
     modifier: Modifier = Modifier
 ) {
     Card(modifier = modifier) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(14.dp)) {
             Text(
                 text = valor.toString(),
                 style = MaterialTheme.typography.headlineSmall,

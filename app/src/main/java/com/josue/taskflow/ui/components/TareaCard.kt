@@ -5,8 +5,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,13 +23,13 @@ import com.josue.taskflow.dominio.model.Tarea
 
 /**
  * Componente reutilizable para mostrar una tarea dentro del LazyColumn.
- * Recibe datos del modelo de dominio.
  */
 @Composable
 fun TareaCard(
     tarea: Tarea,
     onEstadoChange: () -> Unit,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onEliminar: (() -> Unit)? = null
 ) {
     Card(
         onClick = onClick,
@@ -60,6 +64,16 @@ fun TareaCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary
                 )
+            }
+
+            if (onEliminar != null) {
+                IconButton(onClick = onEliminar) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Eliminar tarea",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
             }
 
             Text(

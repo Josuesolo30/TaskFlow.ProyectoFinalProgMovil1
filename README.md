@@ -1,85 +1,82 @@
 # TaskFlow - Laboratorios y Proyecto Integrador
 
-Aplicación Android para la gestión de tareas personales, desarrollada con Kotlin, Jetpack Compose y Material 3. Integra las competencias trabajadas en los **Laboratorios 0, 1+2, 3, 4, 5 y 6** del curso.
+Aplicación Android para la gestión integral de tareas personales, desarrollada con **Kotlin**, **Jetpack Compose**, **Room Database** y **Material 3**. 
+
+Todos los conceptos de los **Laboratorios 0, 1+2, 3, 4, 5 y 6** han sido integrados al **flujo principal e interactivo de la aplicación real** (creación, consulta, filtrado reactivo, edición, reproducción por voz, eliminación y persistencia de tareas).
 
 ---
 
-## 📌 Contenido de los Laboratorios Implementados
+## 📌 Integración de Laboratorios en el Flujo Principal
 
-### 🟢 Lab 0: Nivelación - Scaffold, Navigation e Intent
-* **Estructura con Scaffold**: Uso de `topBar`, `floatingActionButton` (para agregar tareas mediante un `AlertDialog`) y `content` adaptado a `PaddingValues`.
-* **Navegación Robusta**: Implementación de `NavHost` + `NavController`, pasando argumentos dinámicos entre pantallas (`itemId`), usando `navigate()` y `popBackStack()`.
-* **Intent Implícito y Selector**: Botón **"Compartir"** en la pantalla de detalle que dispara un `Intent` implícito (`ACTION_SEND`) con `Intent.createChooser(...)`.
-* **Documentación en código**: Comentario pedagógico explicando la diferencia conceptual entre un **Intent Explícito** y un **Intent Implícito**.
-
----
-
-### 🔵 Lab 1+2: Librería Genérica con Estilo Funcional
-* **Librería Genérica (`ContenedorProcesable<T>`)**: Ubicada en `com.josue.taskflow.util`.
-* **Varianza**: Firma de métodos con proyecciones de tipo `Array<out T>` (covariante) y `MutableList<in T>` (contravariante).
-* **Type Bounds**: Funciones de comparación y ordenamiento (`obtenerMaximo()`, `obtenerMinimo()`, `ordenar()`) restringidas con `where T : Comparable<T>`.
-* **Filtrado Inline Reified**: `inline fun <reified R : T> filtrarPorTipo(): List<R>` para inspección de tipos en tiempo de ejecución.
-* **Operadores Funcionales**: Uso de `map` (`transformar`), `filter` (`filtrar`), `fold` (`acumular`) y `reduce` (`reducir`).
-* **Scope Functions**: Aplicación de `let`, `run`, `also`, `apply` y `with`, con comentarios explicativos en el código.
-* **Pruebas Unitarias**: Suite de 12 pruebas unitarias automatizadas (`ContenedorProcesableTest.kt`) pasando al 100%.
+### 🟢 Lab 0: Interfaz, Estructura y Navegación
+* **Estructura Scaffold**: Pantallas integradas con `TopAppBar`, `FloatingActionButton` (diálogo para agregar tareas) e `innerPadding`.
+* **Navegación Robusta (`NavHost` + `NavController`)**: Rutas estructuradas (`inicio`, `lista`, `detalle/{itemId}`) pasando argumentos dinámicos y regresando con `popBackStack()`.
+* **Intent Implícito (`ACTION_SEND`)**: Compartir datos de tareas reales guardadas mediante un `Intent.createChooser` en la pantalla de detalle.
+* **Formularios con `rememberSaveable`**: Conservan el texto de diálogos y formularios durante rotaciones de pantalla.
 
 ---
 
-### 🟠 Lab 3: Concurrencia y Corrutinas
-* **Migración de Callback a Suspend**: Adaptación de APIs asíncronas heredadas basadas en callbacks a funciones suspendidas utilizando `suspendCancellableCoroutine`.
-* **Módulo de Sincronización (`MatchSyncService`)**: Gestión de tareas en segundo plano usando `Dispatchers.Main.immediate` y control de ciclo de vida con `Job`.
-* **Cancelación Cooperativa**: Implementación de sincronización periódica (*polling*) que responde de forma inmediata a `cancelAndJoin()`.
-* **Evidencia en Logs**: Verificación en Logcat (`LAB3`) de que la cancelación se ejecuta limpiamente (`activeCalls=0`).
+### 开启 Lab 1+2: Genéricos, Varianza y Programación Funcional
+* **Librería Genérica (`ContenedorProcesable<T>`)**: Integrada en la lógica de negocio real de TaskFlow (`ObtenerEstadisticasUseCase` y pipeline de ordenamiento).
+* **Varianza (`out T` / `in T`)**: Uso de proyecciones covariantes en `agregarDesdeFuente` y contravariantes en `copiarA`.
+* **Type Bounds (`where T : Comparable<T>`)**: Operaciones de ordenamiento (`ordenar()`) y cálculo de extremos (`obtenerMaximo()`, `obtenerMinimo()`) aplicadas a la entidad `Tarea : Comparable<Tarea>`.
+* **Operadores Funcionales y Scope Functions**: Uso semántico de `map`, `filter`, `fold` (`acumular`), `reduce` y scope functions (`let`, `apply`, `also`, `run`, `with`).
+* **Filtrado Inline Reified**: `inline fun <reified R : T> filtrarPorTipo()` para filtrado en tiempo de ejecución.
+* **Pruebas Unitarias**: Suite de 16 pruebas unitarias automatizadas pasando al 100%.
 
 ---
 
-### 🔴 Lab 4: Flow y Programación Reactiva
-Se implementan dos fuentes simuladas: una emite listas de tareas y otra emite filtros en momentos diferentes.
-
-* **Pipeline de Operadores Flow**:
-  - `filter`: Descarta emisiones con identificadores duplicados.
-  - `map`: Limpia títulos y ordena las tareas.
-  - `combine`: Combina las tareas con el filtro más reciente.
-  - `transform`: Convierte el resultado en contenido o lista vacía.
-  - `retry`: Realiza hasta dos reintentos ante `IOException`.
-  - `catch`: Transforma el error final en un estado visible.
-  - `stateIn`: Expone el resultado como `StateFlow`.
-* **Estados en la Interfaz**: Manejo reactivo de estados **Cargando**, **Contenido**, **Vacía** y **Error**.
-* **Ruta Independiente**: Las tareas simuladas del Lab 4 cuentan con una pantalla y flujo reactivo propio.
+### 🟠 Lab 3: Corrutinas, Concurrencia y Migración de Callbacks
+* **Ciclo de Vida y Scopes**: Uso estricto de `viewModelScope` y `Dispatchers` apropiados (`Dispatchers.IO` para Room, `Dispatchers.Default` para procesamiento pesado).
+* **Concurrencia (`async` / `await`)**: Invocación paralela en `ObtenerEstadisticasUseCase` para calcular métricas y resúmenes de texto con `coroutineScope`.
+* **Migración de Callbacks a Suspend (`suspendCancellableCoroutine`)**: Adaptación de la API nativa de Android `TextToSpeech` (`TaskAudioPlayer`) para reproducir en voz alta el título y la descripción de cualquier tarea, manejando éxito, error y cancelación cooperativa.
+* **Limpieza de Demostraciones**: Eliminados todos los controles de simulación de partidos y polling deportivo.
 
 ---
 
-### 🟣 Lab 5: MVVM + Clean Architecture (Presentación, Dominio y Datos)
+### 🔴 Lab 4: Programación Reactiva con Flow sobre Tareas Reales
+Reemplazo completo de datos simulados por las tareas reales de Room y la selección de filtro del usuario:
+* **Primera fuente**: Tareas reales emitidas desde Room mediante `Flow<List<Tarea>>`.
+* **Segunda fuente**: Filtro activo (`Todas`, `Pendientes`, `Completadas`) gestionado vía `StateFlow<FiltroTareas>`.
+* **Pipeline Operadores (`construirPipelineTaskFlow`)**:
+  - `filter`: Inspecciona emisiones y descarta listas corruptas o con IDs duplicados.
+  - `map`: Limpia espacios en títulos y ordena mediante `ContenedorProcesable`.
+  - `combine`: Combina en tiempo real las tareas de Room con el filtro seleccionado.
+  - `transform`: Emite el estado de pantalla unificado (`Contenido` o `Vacia`).
+  - `retry`: Reintenta hasta 2 veces ante errores recuperables de E/S.
+  - `catch`: Captura excepciones finales y emite `EstadoListaTaskFlow.Error`.
+* **Interfaz Única**: La pantalla muestra una única lista de tareas reales conectada a este estado.
+
+---
+
+### 🟣 Lab 5: MVVM y Clean Architecture
 * **Capa de Dominio (`com.josue.taskflow.dominio`)**:
-  - **`model.Tarea`**: Modelo de datos de Kotlin puro sin dependencias de Android, Room o Retrofit.
-  - **`repository.TareaRepository`**: Interfaz abstracta con funciones `suspend` y `Flow` (Inversión de Dependencias).
-  - **Casos de Uso (`usecase`)**: `ObtenerTareasUseCase`, `AgregarTareaUseCase`, `CambiarEstadoTareaUseCase` e `ActualizarDescripcionUseCase` implementando `operator fun invoke()`.
+  - Modelos puros (`model.Tarea`), contratos (`repository.TareaRepository`) y Casos de Uso (`ObtenerTareasUseCase`, `AgregarTareaUseCase`, `CambiarEstadoTareaUseCase`, `ActualizarDescripcionUseCase`, `EliminarTareaUseCase`, `ObtenerEstadisticasUseCase`).
 * **Capa de Datos (`com.josue.taskflow.datos`)**:
-  - **`repository.TareaRepositoryImpl`**: Implementación de la interfaz de dominio conectada a la fuente de datos.
+  - Repositorio con Room (`TareaRepositoryImpl`), `TareaDao`, `TareaEntity` y base de datos SQLite.
 * **Capa de Presentación (`com.josue.taskflow.presentacion`)**:
-  - **`viewmodel.TareaViewModel`**: Expone `UiState` mediante `StateFlow` y depende exclusivamente de los Casos de Uso.
-  - **`state.TareaUiState`**: Estado inmutable para la UI siguiendo el patrón Unidirectional Data Flow (**UDF**).
-  - **Composables**: Desacoplados de la lógica de negocio aplicando *"State Down, Events Up"*.
+  - `TareaViewModel` y `TareaUiState` aplicando Unidirectional Data Flow (UDF) y StateDown / EventsUp.
+* **Inyección de Dependencias Manual**: `TareaViewModelFactory` desacopla la creación del ViewModel.
 
 ---
 
-### 🟤 Lab 6: Persistencia con Room y Consultas Reactivas con Flow
-* **Componentes de Room (`com.josue.taskflow.datos.db`)**:
-  - **`TareaEntity`**: Entidad de la tabla `tareas`, con los campos `id`, `titulo`, `descripcion` y `completada`. Incluye mappers `toDomain()` y `toEntity()`.
-  - **`TareaDao`**: Expone consultas mediante `Flow<List<TareaEntity>>` e inserciones/actualizaciones con funciones `suspend`.
-  - **`TaskFlowDatabase`**: Singleton de `RoomDatabase`. Inserta tareas iniciales al crear la base de datos.
-* **Repositorio con Room**:
-  - `TareaRepositoryImpl` implementa `TareaRepository` utilizando `TareaDao`.
-  - Permite crear tareas con título y descripción, consultar tareas, cambiar su estado y actualizar su descripción de forma persistente.
-* **Separación de Responsabilidades**:
-  - El dominio conserva su independencia de Room.
-  - `TareaViewModelFactory` configura el repositorio de Room y lo conecta con los casos de uso.
-* **Confirmaciones con Channel**:
-  - `TareaRepositoryImpl` emite mensajes mediante `Channel<String>` expuestos como `Flow`.
-  - `AppNavigation` observa el flujo del ViewModel y muestra confirmaciones flotantes al crear una tarea, cambiar su estado o guardar su descripción.
-* **Verificación de Persistencia y Base de Datos**:
-  - Persistencia comprobada tras cerrar/abrir la app y rotación de pantalla.
-  - Captura de la tabla `tareas` verificada en Database Inspector.
+### 🟤 Lab 6: Persistencia con Room y Eventos por Channel
+* **Fuente Única de Verdad**: Base de datos SQLite gestionada con Room (`TaskFlowDatabase`, v1).
+* **Escrituras Suspend**: Operaciones de inserción, actualización y eliminación.
+* **Confirmaciones con `Channel`**: `TareaRepositoryImpl` emite eventos de un solo uso mediante `Channel<String>` (`receiveAsFlow()`), los cuales son observados en `AppNavigation` para mostrar mensajes Toasts resilientes a rotaciones de pantalla.
+
+---
+
+## 📊 Matriz de Cumplimiento e Integración
+
+| Laboratorio | Requisito | Función real de TaskFlow | Archivos | Verificación realizada o pendiente |
+| :--- | :--- | :--- | :--- | :--- |
+| **Lab 0** | Navigation e Intent Implícito | Navegación entre Inicio, Lista y Detalle; botón "Compartir" tarea vía `ACTION_SEND`. | `AppNavigation.kt`, `DetalleScreen.kt`, `ListaScreen.kt` | **Realizada** (Navegación probada en AVD/pruebas de compilación). |
+| **Lab 1+2** | Genéricos, Varianza y Programación Funcional | Filtrado, acumulación de resúmenes y ordenamiento de tareas reales usando `ContenedorProcesable`. | `ContenedorProcesable.kt`, `ObtenerEstadisticasUseCase.kt`, `PipelineTaskFlow.kt` | **Realizada** (16 pruebas unitarias pasadas al 100%). |
+| **Lab 3** | Corrutinas, Async y Callbacks a Suspend | Cálculo de métricas concurrentes (`async`) y lectura por voz de tareas (TTS con `suspendCancellableCoroutine`). | `TaskAudioPlayer.kt`, `ObtenerEstadisticasUseCase.kt`, `DetalleScreen.kt` | **Realizada** (Compilación y pruebas de unidad exitosas). |
+| **Lab 4** | Flow reactivo y Operadores | Combinación reactiva de Room + StateFlow de filtro con `filter`, `map`, `combine`, `transform`, `retry` y `catch`. | `PipelineTaskFlow.kt`, `TareaViewModel.kt`, `ListaScreen.kt` | **Realizada** (Pruebas unitarias de Flow pasadas al 100%). |
+| **Lab 5** | MVVM y Clean Architecture | Separación en capas `dominio`, `datos`, `presentacion` y `ui`; ViewModel desacoplado por Casos de Uso. | `TareaViewModel.kt`, `TareaViewModelFactory.kt`, paquete `dominio/` y `datos/` | **Realizada** (Verificado mediante inspección y pruebas). |
+| **Lab 6** | Persistencia Room y Channels | CRUD completo (crear, consultar, editar, completar, eliminar) en Room con eventos por `Channel`. | `TaskFlowDatabase.kt`, `TareaDao.kt`, `TareaRepositoryImpl.kt`, `AppNavigation.kt` | **Realizada** (Persistencia y canal verificados). |
 
 ---
 
@@ -92,73 +89,44 @@ Se implementan dos fuentes simuladas: una emite listas de tareas y otra emite fi
 
 ---
 
-### 🟠 Lab 3: Concurrencia y Corrutinas
-Muestra del log en Android Studio confirmando la invocación de `cancelAndJoin()`, la cancelación del polling (`CANCELLED T-TIGRES`) y la liberación completa de recursos (`activeCalls=0`):
+### 🔴 Lab 4: Diagrama de Marble Reactivo (Room + Filtro Real)
 
-![Evidencia Cancelación Lab 3](screenshots/lab3_cancellation.png)
-
----
-
-### 🔴 Lab 4: Programación Reactiva con Flow
-
-#### Diagrama de Emisiones y Combinación (Marble Diagram)
-![Diagrama Flow Lab 4](screenshots/lab4_marbles.png)
-
-#### Estados de la Interfaz en Lab 4
-| Estado Contenido (Filtro) | Estado Vacío | Estado Error |
-| :---: | :---: | :---: |
-| ![Contenido Lab 4](screenshots/lab4_contenido.png) | ![Vacío Lab 4](screenshots/lab4_vacia.png) | ![Error Lab 4](screenshots/lab4_error.png) |
-
-#### Evidencia de Operadores (`retry` y `catch`) en Logcat
-![Logs Logcat Lab 4](screenshots/lab4_logs.png)
-
----
-
-### 🟣 Lab 5: Arquitectura Limpia (Clean Architecture)
-Estructura del proyecto organizada en capas independientes (**datos**, **dominio** y **presentación**):
-
-![Estructura Clean Architecture Lab 5](screenshots/lab5_capas.png)
-
----
-
-### 🟤 Lab 6: Persistencia con Room y Confirmaciones con Channel
-
-#### Persistencia y Confirmación en la UI
-| Tareas Persistidas en Room | Mensaje de Confirmación (Channel) | Detalle y Edición de Tarea |
-| :---: | :---: | :---: |
-| ![Lista Room](screenshots/lab6_despues.png) | ![Confirmación Channel](screenshots/lab6_confirmacion.png) | ![Detalle Edición](screenshots/lab6_antes.png) |
-
-#### Inspección de la Base de Datos SQLite (Database Inspector)
-![Database Inspector Room](screenshots/lab6_room.png)
+```
+Fuente Room:    ---[Tarea 1, Tarea 2, Tarea 3]------------------------->
+Fuente Filtro:  ---(TODAS)--------------->(PENDIENTES)---->(COMPLETADAS)->
+                       |                       |                 |
+Combine & Map:  -------[3 Tareas]------------->[2 Pendientes]---->[1 Completada]
+                       |                       |                 |
+Transform:      ---> Estado.Contenido ----> Estado.Contenido ---> Estado.Contenido
+```
 
 ---
 
 ## 🛠️ Tecnologías Utilizadas
-
-* **Kotlin 2.x** (Genéricos, Varianza, Reified, Scope Functions, Corrutinas)
+* **Kotlin 2.x** (Corrutinas, Flow, Genéricos, Varianza, Reified, Scope Functions)
 * **Room Database 2.6.1** & **KSP**
-* **Arquitectura MVVM + Clean Architecture**
-* **Unidirectional Data Flow (UDF)** con `StateFlow` y `ViewModel`
-* **Jetpack Compose** & **Material 3**
+* **Clean Architecture & MVVM**
+* **Jetpack Compose & Material 3**
 * **Navigation Compose 2.9.8**
-* **KotlinX Coroutines & Channels** (`suspendCancellableCoroutine`, `cancelAndJoin`, `Channel.receiveAsFlow()`)
-* **JUnit 4** para pruebas unitarias de la librería genérica
+* **JUnit 4** (Pruebas unitarias)
 
 ---
 
 ## 🚀 Cómo Ejecutar el Proyecto
 
-1. Clonar este repositorio:
+1. Clonar el repositorio:
    ```bash
    git clone https://github.com/Josuesolo30/TaskFlow.ProyectoFinalProgMovil1.git
    ```
-2. Abrir el proyecto en **Android Studio**.
-3. Sincronizar los archivos de Gradle.
-4. Para ejecutar las pruebas unitarias del Lab 1+2:
+2. Abrir en **Android Studio**.
+3. Sincronizar Gradle.
+4. Ejecutar las pruebas unitarias:
    ```bash
    ./gradlew test
    ```
-5. Para ejecutar la aplicación en el emulador: seleccionar el módulo `app` y presionar **Run** (Shift + F10).
+5. Ejecutar la aplicación en el emulador o dispositivo físico.
+
+---
 
 ## 🤖 Política de Uso de Inteligencia Artificial (Declaración Explícita)
 
@@ -169,17 +137,14 @@ De acuerdo con las directrices académicas de transparencia, se declara explíci
 
 ### 📋 Alcance y Casos de Uso Específicos
 1. **Depuración de Entorno y Compilación**:
-   * Diagnóstico del error de conexión con el demonio de compilación de Kotlin (`Could not connect to Kotlin compile daemon`).
-   * Ajuste de propiedades en `gradle.properties` (`kotlin.compiler.execution.strategy=in-process`).
+   * Diagnóstico de errores de compilación y ajuste de `gradle.properties`.
 2. **Documentación y Organización del Entregable**:
-   * Redacción, maquetación en Markdown y estructura pedagógica del documento `README.md`.
-   * Integración y referencia de las capturas de pantalla de evidencia para los Laboratorios 3, 4, 5 y 6.
+   * Redacción, maquetación en Markdown y estructuración de la matriz de cumplimiento.
 3. **Revisión de Código y Buenas Prácticas**:
-   * Verificación de la estructura de **Clean Architecture** (Dominio, Datos, Presentación) y manejo reactivo de estados con `StateFlow` y `Channel`.
-   * Sugerencia de buenas prácticas en Kotlin, Corrutinas y Jetpack Compose.
+   * Integración de patrones Clean Architecture, corrutinas con `suspendCancellableCoroutine` y Flow reactivo.
 
 ### 🛡️ Declaración de Responsabilidad y Autoría
-Todo el código generado o sugerido con apoyo de IA fue revisado, probado, comprendido y validado manualmente por el autor (**Josue Rafael Piña Fermin**), garantizando que la lógica de negocio, las pruebas unitarias y el comportamiento de la aplicación en el emulador cumplan con todos los requerimientos asignados.
+Todo el código generado o sugerido con apoyo de IA fue revisado, probado, comprendido y validado manualmente por el autor (**Josue Rafael Piña Fermin**).
 
 ---
 

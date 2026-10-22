@@ -1,6 +1,5 @@
 package com.josue.taskflow.datos.repository
 
-
 import com.josue.taskflow.datos.db.TareaDao
 import com.josue.taskflow.datos.db.TareaEntity
 import com.josue.taskflow.datos.db.toDomain
@@ -12,33 +11,19 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 
 /**
- * Capa de Datos: Implementación de TareaRepository usando la base de datos Room.
- *
- * Cumple con los requerimientos del Lab 6:
- * - Reemplaza la fuente en memoria por Room.
- * - Implementa la misma interfaz TareaRepository de la capa de Dominio expuesta como Flow.
- * - Incluye un evento one-time con Channel para confirmaciones ("elemento guardado").
- */
-
-
-/**
- * Repositorio de tareas con persistencia en Room.
+ * Capa de Datos: Implementación de TareaRepository usando Room Database y Channels.
  */
 class TareaRepositoryImpl(
     private val tareaDao: TareaDao
 ) : TareaRepository {
 
-    private val confirmacionChannel =
-        Channel<String>(Channel.BUFFERED)
+    private val confirmacionChannel = Channel<String>(Channel.BUFFERED)
 
-    val confirmacionEventosFlow: Flow<String> =
-        confirmacionChannel.receiveAsFlow()
+    val confirmacionEventosFlow: Flow<String> = confirmacionChannel.receiveAsFlow()
 
     override fun obtenerTareas(): Flow<List<Tarea>> {
         return tareaDao.obtenerTareas().map { entidades ->
-            entidades.map { entidad ->
-                entidad.toDomain()
-            }
+            entidades.map { it.toDomain() }
         }
     }
 
@@ -52,30 +37,16 @@ class TareaRepositoryImpl(
                 descripcion = descripcion
             )
         )
-
-        confirmacionChannel.send(
-            "Tarea guardada: $titulo"
-        )
+        confirmacionChannel.send("Tarea guardada: $titulo")
     }
 
     override suspend fun cambiarEstadoTarea(id: Int) {
         val tarea = tareaDao.obtenerTareaPorId(id) ?: return
-
-        val actualizada = tarea.copy(
-            completada = !tarea.completada
-        )
-
+        val actualizada = tarea.copy(completada = !tarea.completada)
         tareaDao.actualizarTarea(actualizada)
 
-        val estado = if (actualizada.completada) {
-            "completada"
-        } else {
-            "pendiente"
-        }
-
-        confirmacionChannel.send(
-            "Tarea marcada como $estado"
-        )
+        val estado = if (actualizada.completada) "completada" else "pendiente"
+        confirmacionChannel.send("Tarea marcada como $estado")
     }
 
     override suspend fun actualizarDescripcion(
@@ -83,16 +54,14 @@ class TareaRepositoryImpl(
         descripcion: String
     ) {
         val tarea = tareaDao.obtenerTareaPorId(id) ?: return
+        tareaDao.actualizarTarea(tarea.copy(descripcion = descripcion))
+        confirmacionChannel.send("Descripción guardada")
+    }
 
-        tareaDao.actualizarTarea(
-            tarea.copy(descripcion = descripcion)
-        )
-
-        confirmacionChannel.send(
-            "Descripción guardada"
-        )
+    override suspend fun eliminarTarea(id: Int) {
+        val tarea = tareaDao.obtenerTareaPorId(id)
+        tareaDao.eliminarTarea(id)
+        val titulo = tarea?.titulo ?: "Tarea"
+        confirmacionChannel.send("Tarea eliminada: $titulo")
     }
 }
-
-
-

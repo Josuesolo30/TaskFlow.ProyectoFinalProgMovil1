@@ -8,7 +8,7 @@ import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 /**
- * Data Access Object (DAO) de Room para operaciones sobre la tabla 'tareas'.
+ * Data Access Object (DAO) de Room para la tabla 'tareas'.
  */
 @Dao
 interface TareaDao {
@@ -24,6 +24,9 @@ interface TareaDao {
 
     @Update
     suspend fun actualizarTarea(tarea: TareaEntity)
+
+    @Query("DELETE FROM tareas WHERE id = :id")
+    suspend fun eliminarTarea(id: Int)
 
     @Query("SELECT COUNT(*) FROM tareas")
     suspend fun contarTareas(): Int

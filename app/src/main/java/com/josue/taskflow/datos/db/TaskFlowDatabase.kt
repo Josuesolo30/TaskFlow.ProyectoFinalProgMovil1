@@ -28,16 +28,13 @@ abstract class TaskFlowDatabase : RoomDatabase() {
                     "taskflow_database"
                 )
                     .addCallback(
-                        object : RoomDatabase.Callback() {
-                            override fun onCreate(
-                                db: SupportSQLiteDatabase
-                            ) {
+                        object : Callback() {
+                            override fun onCreate(db: SupportSQLiteDatabase) {
                                 super.onCreate(db)
 
                                 db.execSQL(
                                     """
-                                    INSERT INTO tareas
-                                    (titulo, descripcion, completada)
+                                    INSERT INTO tareas (titulo, descripcion, completada)
                                     VALUES (?, ?, ?)
                                     """.trimIndent(),
                                     arrayOf<Any>(
@@ -49,8 +46,7 @@ abstract class TaskFlowDatabase : RoomDatabase() {
 
                                 db.execSQL(
                                     """
-                                    INSERT INTO tareas
-                                    (titulo, descripcion, completada)
+                                    INSERT INTO tareas (titulo, descripcion, completada)
                                     VALUES (?, ?, ?)
                                     """.trimIndent(),
                                     arrayOf<Any>(
@@ -62,8 +58,7 @@ abstract class TaskFlowDatabase : RoomDatabase() {
 
                                 db.execSQL(
                                     """
-                                    INSERT INTO tareas
-                                    (titulo, descripcion, completada)
+                                    INSERT INTO tareas (titulo, descripcion, completada)
                                     VALUES (?, ?, ?)
                                     """.trimIndent(),
                                     arrayOf<Any>(

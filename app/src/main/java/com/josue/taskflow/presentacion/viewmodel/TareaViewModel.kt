@@ -3,117 +3,68 @@ package com.josue.taskflow.presentacion.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.josue.taskflow.dominio.pipeline.construirPipelineTaskFlow
 import com.josue.taskflow.dominio.usecase.ActualizarDescripcionUseCase
 import com.josue.taskflow.dominio.usecase.AgregarTareaUseCase
 import com.josue.taskflow.dominio.usecase.CambiarEstadoTareaUseCase
+import com.josue.taskflow.dominio.usecase.EliminarTareaUseCase
+import com.josue.taskflow.dominio.usecase.ObtenerEstadisticasUseCase
 import com.josue.taskflow.dominio.usecase.ObtenerTareasUseCase
-import com.josue.taskflow.lab4.FiltroTareas
-import com.josue.taskflow.lab4.FuentesTareasSimuladas
-import com.josue.taskflow.lab4.Lab4Tareas
+import com.josue.taskflow.presentacion.state.EstadoListaTaskFlow
+import com.josue.taskflow.presentacion.state.FiltroTareas
 import com.josue.taskflow.presentacion.state.TareaUiState
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+/**
+ * ViewModel principal de la aplicación TaskFlow.
+ *
+ * Cumple con los patrones MVVM y Clean Architecture (Lab 5):
+ * - Depende exclusivamente de los Casos de Uso.
+ * - Expone el pipeline reactivo de Flow (Lab 4) conectando Room y el filtro activo.
+ * - Expone el flujo de eventos de confirmación de Room vía Channel (Lab 6).
+ */
 class TareaViewModel(
     private val obtenerTareasUseCase: ObtenerTareasUseCase,
     private val agregarTareaUseCase: AgregarTareaUseCase,
     private val cambiarEstadoTareaUseCase: CambiarEstadoTareaUseCase,
     private val actualizarDescripcionUseCase: ActualizarDescripcionUseCase,
+    private val eliminarTareaUseCase: EliminarTareaUseCase,
+    private val obtenerEstadisticasUseCase: ObtenerEstadisticasUseCase = ObtenerEstadisticasUseCase(),
     val confirmacionEventosFlow: Flow<String> = emptyFlow()
 ) : ViewModel() {
 
-    private val lab4 = Lab4Tareas(
+    // Fuente de filtro seleccionada por el usuario (StateFlow)
+    private val _filtroActivo = MutableStateFlow(FiltroTareas.TODAS)
+    val filtroActivo: StateFlow<FiltroTareas> = _filtroActivo.asStateFlow()
+
+    // Pipeline reactivo de Flow (Lab 4) para las tareas reales de Room
+    val estadoLista: StateFlow<EstadoListaTaskFlow> = construirPipelineTaskFlow(
+        fuenteTareas = obtenerTareasUseCase(),
+        fuenteFiltro = _filtroActivo,
+        registrarLog = { mensaje -> Log.d("TaskFlow_Flow", mensaje) }
+    ).stateIn(
         scope = viewModelScope,
-        tareasIniciales = emptyList(),
-        registrar = { mensaje ->
-            Log.d("LAB4", mensaje)
-        }
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = EstadoListaTaskFlow.Cargando
     )
 
-    val estadoLab4 = lab4.estado
-
-    val tareasSimuladasLab4 = lab4.tareasSimuladas
-
-    private var demoJob: Job? = null
-
-    fun iniciarDemoLab4() {
-        demoJob?.cancel()
-
-        lab4.actualizarTareas(emptyList())
-        lab4.seleccionarFiltro(FiltroTareas.TODAS)
-        lab4.recargar()
-
-        demoJob = viewModelScope.launch {
-            launch {
-                FuentesTareasSimuladas.tareas().collect { tareas ->
-                    lab4.actualizarTareas(tareas)
-                }
-            }
-
-            launch {
-                FuentesTareasSimuladas.filtro().collect { filtro ->
-                    lab4.seleccionarFiltro(filtro)
-                }
-            }
-        }
-    }
-
-    fun seleccionarFiltroLab4(filtro: FiltroTareas) {
-        lab4.seleccionarFiltro(filtro)
-    }
-
-    fun simularFalloLab4() {
-        lab4.simularFalloTemporal()
-    }
-
-    fun simularErrorLab4() {
-        lab4.simularError()
-    }
-
-    fun recargarLab4() {
-        lab4.recargar()
-    }
-
-    fun cambiarEstadoSimuladoLab4(id: Int) {
-        // Detiene la demo para que una emisión posterior
-        // no sobrescriba el cambio manual.
-        demoJob?.cancel()
-
-        lab4.cambiarEstadoTareaSimulada(id)
-    }
-
-    fun actualizarDescripcionSimuladaLab4(
-        id: Int,
-        descripcion: String
-    ) {
-        demoJob?.cancel()
-
-        val tareasActualizadas = tareasSimuladasLab4.value.map { tarea ->
-            if (tarea.id == id) {
-                tarea.copy(descripcion = descripcion.trim())
-            } else {
-                tarea
-            }
-        }
-
-        lab4.actualizarTareas(tareasActualizadas)
-    }
-
+    // Estado general de la UI con resumen de tareas reales (UDF)
     val uiState: StateFlow<TareaUiState> = obtenerTareasUseCase()
         .map { lista ->
+            val stats = obtenerEstadisticasUseCase(lista)
             TareaUiState(
                 tareas = lista,
-                totalTareas = lista.size,
-                completadas = lista.count { tarea ->
-                    tarea.completada
-                },
+                totalTareas = stats.total,
+                completadas = stats.completadas,
+                pendientes = stats.pendientes,
                 cargando = false
             )
         }
@@ -123,10 +74,11 @@ class TareaViewModel(
             initialValue = TareaUiState(cargando = true)
         )
 
-    fun agregarTarea(
-        titulo: String,
-        descripcion: String = ""
-    ) {
+    fun seleccionarFiltro(filtro: FiltroTareas) {
+        _filtroActivo.value = filtro
+    }
+
+    fun agregarTarea(titulo: String, descripcion: String = "") {
         viewModelScope.launch {
             agregarTareaUseCase(titulo, descripcion)
         }
@@ -138,12 +90,15 @@ class TareaViewModel(
         }
     }
 
-    fun actualizarDescripcion(
-        id: Int,
-        descripcion: String
-    ) {
+    fun actualizarDescripcion(id: Int, descripcion: String) {
         viewModelScope.launch {
             actualizarDescripcionUseCase(id, descripcion)
+        }
+    }
+
+    fun eliminarTarea(id: Int) {
+        viewModelScope.launch {
+            eliminarTareaUseCase(id)
         }
     }
 }

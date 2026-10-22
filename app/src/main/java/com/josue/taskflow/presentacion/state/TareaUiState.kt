@@ -10,5 +10,6 @@ data class TareaUiState(
     val tareas: List<Tarea> = emptyList(),
     val totalTareas: Int = 0,
     val completadas: Int = 0,
+    val pendientes: Int = 0,
     val cargando: Boolean = false,
 )

@@ -1,6 +1,9 @@
 package com.josue.taskflow.ui.screens
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,7 +16,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -27,49 +32,38 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.josue.taskflow.dominio.model.Tarea
-import com.josue.taskflow.lab4.EstadoListaLab4
-import com.josue.taskflow.lab4.FiltroTareas
-import com.josue.taskflow.ui.components.PanelLab4
+import com.josue.taskflow.presentacion.state.EstadoListaTaskFlow
+import com.josue.taskflow.presentacion.state.FiltroTareas
 import com.josue.taskflow.ui.components.TareaCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ListaScreen(
-    tareas: List<Tarea>,
-    estadoLab4: EstadoListaLab4,
-    onIniciarDemoLab4: () -> Unit,
-    onFiltroLab4: (FiltroTareas) -> Unit,
-    onFalloLab4: () -> Unit,
-    onErrorLab4: () -> Unit,
-    onRecargarLab4: () -> Unit,
-    onCambiarEstadoSimuladoLab4: (Int) -> Unit,
-    onAbrirDetalleSimuladoLab4: (Int) -> Unit,
+    estadoLista: EstadoListaTaskFlow,
+    filtroActivo: FiltroTareas,
+    onSeleccionarFiltro: (FiltroTareas) -> Unit,
     onAgregarTarea: (String, String) -> Unit,
     onCambiarEstado: (Int) -> Unit,
+    onEliminarTarea: (Int) -> Unit,
     onAbrirDetalle: (Int) -> Unit,
     onVolver: () -> Unit
 ) {
-    var mostrarDialogo by rememberSaveable {
-        mutableStateOf(false)
-    }
+    var mostrarDialogoCrear by rememberSaveable { mutableStateOf(false) }
+    var textoNuevaTarea by rememberSaveable { mutableStateOf("") }
+    var descripcionNuevaTarea by rememberSaveable { mutableStateOf("") }
 
-    var textoNuevaTarea by rememberSaveable {
-        mutableStateOf("")
-    }
+    var tareaAEliminar by rememberSaveable { mutableStateOf<Int?>(null) }
 
-    var descripcionNuevaTarea by rememberSaveable {
-        mutableStateOf("")
-    }
-
-    val estadoLista = rememberLazyListState()
+    val estadoScroll = rememberLazyListState()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Mis tareas") },
+                title = { Text("Mis Tareas") },
                 navigationIcon = {
                     TextButton(onClick = onVolver) {
                         Text("Volver")
@@ -78,9 +72,7 @@ fun ListaScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { mostrarDialogo = true }
-            ) {
+            FloatingActionButton(onClick = { mostrarDialogoCrear = true }) {
                 Icon(
                     imageVector = Icons.Default.Add,
                     contentDescription = "Agregar tarea"
@@ -88,93 +80,127 @@ fun ListaScreen(
             }
         }
     ) { innerPadding ->
-        LazyColumn(
-            state = estadoLista,
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            item {
-                PanelLab4(
-                    estado = estadoLab4,
-                    iniciarDemo = onIniciarDemoLab4,
-                    seleccionarFiltro = onFiltroLab4,
-                    falloTemporal = onFalloLab4,
-                    errorPersistente = onErrorLab4,
-                    recargar = onRecargarLab4,
-                    onCambiarEstadoSimulado =
-                        onCambiarEstadoSimuladoLab4,
-                    onAbrirDetalleSimulado =
-                        onAbrirDetalleSimuladoLab4
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-
-            if (tareas.isEmpty()) {
-                item {
-                    Text(
-                        text = "Todavía no tienes tareas.",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                }
-            } else {
-                items(
-                    items = tareas,
-                    key = { tarea -> tarea.id }
-                ) { tarea ->
-                    TareaCard(
-                        tarea = tarea,
-                        onEstadoChange = {
-                            onCambiarEstado(tarea.id)
-                        },
-                        onClick = {
-                            onAbrirDetalle(tarea.id)
+            // Fila de Filtros Reactivos (Todas, Pendientes, Completadas)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FiltroTareas.entries.forEach { filtro ->
+                    val seleccionado = filtro == filtroActivo
+                    FilterChip(
+                        selected = seleccionado,
+                        onClick = { onSeleccionarFiltro(filtro) },
+                        label = {
+                            Text(
+                                when (filtro) {
+                                    FiltroTareas.TODAS -> "Todas"
+                                    FiltroTareas.PENDIENTES -> "Pendientes"
+                                    FiltroTareas.COMPLETADAS -> "Completadas"
+                                }
+                            )
                         }
                     )
+                }
+            }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Renderizado según el estado reactivo del Flow (Lab 4)
+            when (estadoLista) {
+                is EstadoListaTaskFlow.Cargando -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+
+                is EstadoListaTaskFlow.Vacia -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = when (estadoLista.filtro) {
+                                FiltroTareas.TODAS -> "No tienes tareas guardadas. Presiona '+' para agregar una."
+                                FiltroTareas.PENDIENTES -> "No hay tareas pendientes."
+                                FiltroTareas.COMPLETADAS -> "No hay tareas completadas."
+                            },
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                }
+
+                is EstadoListaTaskFlow.Error -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "Error: ${estadoLista.mensaje}",
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        }
+                    }
+                }
+
+                is EstadoListaTaskFlow.Contenido -> {
+                    LazyColumn(
+                        state = estadoScroll,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        items(
+                            items = estadoLista.tareas,
+                            key = { tarea -> tarea.id }
+                        ) { tarea ->
+                            TareaCard(
+                                tarea = tarea,
+                                onEstadoChange = { onCambiarEstado(tarea.id) },
+                                onClick = { onAbrirDetalle(tarea.id) },
+                                onEliminar = { tareaAEliminar = tarea.id }
+                            )
+
+                            Spacer(modifier = Modifier.height(10.dp))
+                        }
+                    }
                 }
             }
         }
 
-        if (mostrarDialogo) {
+        // Diálogo para crear nueva tarea
+        if (mostrarDialogoCrear) {
             AlertDialog(
                 onDismissRequest = {
-                    mostrarDialogo = false
+                    mostrarDialogoCrear = false
                     textoNuevaTarea = ""
                     descripcionNuevaTarea = ""
                 },
-                title = {
-                    Text("Nueva tarea")
-                },
+                title = { Text("Nueva Tarea") },
                 text = {
                     Column {
                         OutlinedTextField(
                             value = textoNuevaTarea,
-                            onValueChange = {
-                                textoNuevaTarea = it
-                            },
-                            label = {
-                                Text("Título de la tarea")
-                            },
+                            onValueChange = { textoNuevaTarea = it },
+                            label = { Text("Título de la tarea") },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
                         )
 
-                        Spacer(
-                            modifier = Modifier.height(12.dp)
-                        )
+                        Spacer(modifier = Modifier.height(12.dp))
 
                         OutlinedTextField(
                             value = descripcionNuevaTarea,
-                            onValueChange = {
-                                descripcionNuevaTarea = it
-                            },
-                            label = {
-                                Text("Descripción")
-                            },
+                            onValueChange = { descripcionNuevaTarea = it },
+                            label = { Text("Descripción") },
                             minLines = 3,
                             maxLines = 5,
                             modifier = Modifier.fillMaxWidth()
@@ -185,14 +211,10 @@ fun ListaScreen(
                     Button(
                         onClick = {
                             if (textoNuevaTarea.isNotBlank()) {
-                                onAgregarTarea(
-                                    textoNuevaTarea,
-                                    descripcionNuevaTarea
-                                )
-
+                                onAgregarTarea(textoNuevaTarea, descripcionNuevaTarea)
                                 textoNuevaTarea = ""
                                 descripcionNuevaTarea = ""
-                                mostrarDialogo = false
+                                mostrarDialogoCrear = false
                             }
                         },
                         enabled = textoNuevaTarea.isNotBlank()
@@ -203,11 +225,35 @@ fun ListaScreen(
                 dismissButton = {
                     TextButton(
                         onClick = {
-                            mostrarDialogo = false
+                            mostrarDialogoCrear = false
                             textoNuevaTarea = ""
                             descripcionNuevaTarea = ""
                         }
                     ) {
+                        Text("Cancelar")
+                    }
+                }
+            )
+        }
+
+        // Diálogo de confirmación para eliminar tarea
+        tareaAEliminar?.let { id ->
+            AlertDialog(
+                onDismissRequest = { tareaAEliminar = null },
+                title = { Text("Eliminar Tarea") },
+                text = { Text("¿Estás seguro de que deseas eliminar esta tarea?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            onEliminarTarea(id)
+                            tareaAEliminar = null
+                        }
+                    ) {
+                        Text("Eliminar")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { tareaAEliminar = null }) {
                         Text("Cancelar")
                     }
                 }

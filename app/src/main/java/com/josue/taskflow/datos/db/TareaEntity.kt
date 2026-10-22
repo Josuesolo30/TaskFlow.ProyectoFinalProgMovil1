@@ -6,7 +6,7 @@ import com.josue.taskflow.dominio.model.Tarea
 
 /**
  * Entidad de Room para la tabla 'tareas'.
- * Ubicada exclusivamente en la Capa de Datos.
+ * Ubicada exclusivamente en la Capa de Datos (`datos.db`).
  */
 @Entity(tableName = "tareas")
 data class TareaEntity(
@@ -18,7 +18,7 @@ data class TareaEntity(
 )
 
 /**
- * Función de extensión para mapear TareaEntity (Capa de Datos) a Tarea (Capa de Dominio).
+ * Mapeo de TareaEntity (Capa de Datos) a Tarea (Capa de Dominio).
  */
 fun TareaEntity.toDomain(): Tarea {
     return Tarea(
@@ -30,7 +30,7 @@ fun TareaEntity.toDomain(): Tarea {
 }
 
 /**
- * Función de extensión para mapear Tarea (Capa de Dominio) a TareaEntity (Capa de Datos).
+ * Mapeo de Tarea (Capa de Dominio) a TareaEntity (Capa de Datos).
  */
 fun Tarea.toEntity(): TareaEntity {
     return TareaEntity(

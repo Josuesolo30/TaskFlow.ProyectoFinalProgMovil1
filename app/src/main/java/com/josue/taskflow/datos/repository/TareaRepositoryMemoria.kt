@@ -50,7 +50,6 @@ object TareaRepositoryMemoria : TareaRepository {
                 descripcion = descripcion,
                 completada = false
             )
-
             tareas.value = tareas.value + nuevaTarea
         }
     }
@@ -79,6 +78,12 @@ object TareaRepositoryMemoria : TareaRepository {
                     tarea
                 }
             }
+        }
+    }
+
+    override suspend fun eliminarTarea(id: Int) {
+        mutex.withLock {
+            tareas.value = tareas.value.filter { it.id != id }
         }
     }
 }

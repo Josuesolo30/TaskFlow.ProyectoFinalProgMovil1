@@ -18,7 +18,6 @@ import com.josue.taskflow.presentacion.viewmodel.TareaViewModelFactory
 import com.josue.taskflow.ui.screens.DetalleScreen
 import com.josue.taskflow.ui.screens.InicioScreen
 import com.josue.taskflow.ui.screens.ListaScreen
-import kotlinx.coroutines.flow.collect
 
 sealed class Pantalla(
     val ruta: String
@@ -28,33 +27,21 @@ sealed class Pantalla(
     object Lista : Pantalla("lista")
 
     object Detalle : Pantalla("detalle/{itemId}") {
-        fun crearRuta(id: Int): String {
-            return "detalle/$id"
-        }
-    }
-
-    object DetalleSimulado : Pantalla("detalleSimulado/{itemId}") {
-        fun crearRuta(id: Int): String {
-            return "detalleSimulado/$id"
-        }
+        fun crearRuta(id: Int): String = "detalle/$id"
     }
 }
 
 @Composable
 fun AppNavigation() {
-    val applicationContext =
-        LocalContext.current.applicationContext
+    val applicationContext = LocalContext.current.applicationContext
 
     val factory = remember(applicationContext) {
         TareaViewModelFactory(applicationContext)
     }
 
-    val tareaViewModel: TareaViewModel = viewModel(
-        factory = factory
-    )
+    val tareaViewModel: TareaViewModel = viewModel(factory = factory)
 
-    // El flujo pertenece al mismo repositorio que utiliza
-    // el ViewModel, incluso después de girar la pantalla.
+    // Observa eventos one-time de confirmación desde el Channel de Room (Lab 6)
     LaunchedEffect(tareaViewModel) {
         tareaViewModel.confirmacionEventosFlow.collect { mensaje ->
             Toast.makeText(
@@ -68,146 +55,67 @@ fun AppNavigation() {
     val navController = rememberNavController()
 
     val uiState by tareaViewModel.uiState.collectAsState()
-
-    val estadoLab4 by tareaViewModel.estadoLab4.collectAsState()
-
-    val tareasSimuladas by
-    tareaViewModel.tareasSimuladasLab4.collectAsState()
+    val estadoLista by tareaViewModel.estadoLista.collectAsState()
+    val filtroActivo by tareaViewModel.filtroActivo.collectAsState()
 
     NavHost(
         navController = navController,
         startDestination = Pantalla.Inicio.ruta
     ) {
-        composable(
-            route = Pantalla.Inicio.ruta
-        ) {
+        composable(route = Pantalla.Inicio.ruta) {
             InicioScreen(
                 totalTareas = uiState.totalTareas,
                 tareasCompletadas = uiState.completadas,
+                tareasPendientes = uiState.pendientes,
                 onVerTareas = {
                     navController.navigate(Pantalla.Lista.ruta)
                 }
             )
         }
 
-        composable(
-            route = Pantalla.Lista.ruta
-        ) {
+        composable(route = Pantalla.Lista.ruta) {
             ListaScreen(
-                tareas = uiState.tareas,
-                estadoLab4 = estadoLab4,
-
-                onIniciarDemoLab4 =
-                    tareaViewModel::iniciarDemoLab4,
-
-                onFiltroLab4 =
-                    tareaViewModel::seleccionarFiltroLab4,
-
-                onFalloLab4 =
-                    tareaViewModel::simularFalloLab4,
-
-                onErrorLab4 =
-                    tareaViewModel::simularErrorLab4,
-
-                onRecargarLab4 =
-                    tareaViewModel::recargarLab4,
-
-                onCambiarEstadoSimuladoLab4 =
-                    tareaViewModel::cambiarEstadoSimuladoLab4,
-
-                onAbrirDetalleSimuladoLab4 = { id ->
-                    navController.navigate(
-                        Pantalla.DetalleSimulado.crearRuta(id)
-                    )
-                },
-
+                estadoLista = estadoLista,
+                filtroActivo = filtroActivo,
+                onSeleccionarFiltro = tareaViewModel::seleccionarFiltro,
                 onAgregarTarea = { titulo, descripcion ->
-                    tareaViewModel.agregarTarea(
-                        titulo,
-                        descripcion
-                    )
+                    tareaViewModel.agregarTarea(titulo, descripcion)
                 },
-
                 onCambiarEstado = { id ->
                     tareaViewModel.cambiarEstadoTarea(id)
                 },
-
-                onAbrirDetalle = { id ->
-                    navController.navigate(
-                        Pantalla.Detalle.crearRuta(id)
-                    )
+                onEliminarTarea = { id ->
+                    tareaViewModel.eliminarTarea(id)
                 },
-
+                onAbrirDetalle = { id ->
+                    navController.navigate(Pantalla.Detalle.crearRuta(id))
+                },
                 onVolver = {
                     navController.popBackStack()
                 }
             )
         }
 
-        // Detalle de una tarea guardada en Room.
         composable(
             route = Pantalla.Detalle.ruta,
             arguments = listOf(
-                navArgument("itemId") {
-                    type = NavType.IntType
-                }
+                navArgument("itemId") { type = NavType.IntType }
             )
         ) { backStack ->
             val id = backStack.arguments?.getInt("itemId") ?: 0
-
-            val tareaSeleccionada = uiState.tareas.firstOrNull {
-                it.id == id
-            }
+            val tareaSeleccionada = uiState.tareas.firstOrNull { it.id == id }
 
             DetalleScreen(
                 tarea = tareaSeleccionada,
-
                 onCambiarEstado = {
                     tareaViewModel.cambiarEstadoTarea(id)
                 },
-
                 onGuardarDescripcion = { descripcion ->
-                    tareaViewModel.actualizarDescripcion(
-                        id,
-                        descripcion
-                    )
+                    tareaViewModel.actualizarDescripcion(id, descripcion)
                 },
-
-                onVolver = {
-                    navController.popBackStack()
-                }
-            )
-        }
-
-        // Detalle de una tarea simulada del LAB 4.
-        composable(
-            route = Pantalla.DetalleSimulado.ruta,
-            arguments = listOf(
-                navArgument("itemId") {
-                    type = NavType.IntType
-                }
-            )
-        ) { backStack ->
-            val id = backStack.arguments?.getInt("itemId") ?: 0
-
-            val tareaSeleccionada = tareasSimuladas.firstOrNull {
-                it.id == id
-            }
-
-            DetalleScreen(
-                tarea = tareaSeleccionada,
-
-                onCambiarEstado = {
-                    tareaViewModel.cambiarEstadoSimuladoLab4(id)
+                onEliminarTarea = {
+                    tareaViewModel.eliminarTarea(id)
                 },
-
-                onGuardarDescripcion = { descripcion ->
-                    tareaViewModel.actualizarDescripcionSimuladaLab4(
-                        id,
-                        descripcion
-                    )
-                },
-
                 onVolver = {
                     navController.popBackStack()
                 }
