@@ -1,19 +1,18 @@
 package com.josue.taskflow.util
 
-import com.josue.taskflow.dominio.model.Tarea
+import com.josue.taskflow.core.collection.ContenedorProcesable
+import com.josue.taskflow.core.collection.obtenerMaximo
+import com.josue.taskflow.core.collection.obtenerMinimo
+import com.josue.taskflow.core.collection.ordenar
+import com.josue.taskflow.domain.model.Tarea
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
- * Pruebas unitarias para validar las capacidades genéricas, funcionales, varianza y type bounds
- * de [ContenedorProcesable].
+ * Pruebas unitarias para validar [ContenedorProcesable].
  */
 class ContenedorProcesableTest {
-
-    // -------------------------------------------------------------------------
-    // 1. Pruebas de Operadores Funcionales (map, filter, fold, reduce)
-    // -------------------------------------------------------------------------
 
     @Test
     fun `transformar debe mapear elementos a un nuevo tipo`() {
@@ -47,13 +46,8 @@ class ContenedorProcesableTest {
         assertEquals("A-B-C-D", concatenado)
     }
 
-    // -------------------------------------------------------------------------
-    // 2. Pruebas de Varianza (out / in)
-    // -------------------------------------------------------------------------
-
     @Test
     fun `agregarDesdeFuente debe aceptar arreglos covariantes out T`() {
-        // Number es supertipo de Int y Double
         val contenedorNumber = ContenedorProcesable<Number>(listOf(1, 2))
         val fuenteSubtipo: Array<Int> = arrayOf(3, 4)
 
@@ -73,10 +67,6 @@ class ContenedorProcesableTest {
         assertEquals(listOf<Number>(1.0, 2.0, 10, 20), destinoSupertipo)
     }
 
-    // -------------------------------------------------------------------------
-    // 3. Pruebas de Inline Reified (filtrarPorTipo)
-    // -------------------------------------------------------------------------
-
     @Test
     fun `filtrarPorTipo debe filtrar elementos en tiempo de ejecucion usando reified`() {
         val heterogeneo = ContenedorProcesable<Any>(listOf("Kotlin", 42, "Compose", 3.14, "Android", true))
@@ -87,10 +77,6 @@ class ContenedorProcesableTest {
         assertEquals(listOf("Kotlin", "Compose", "Android"), soloStrings)
         assertEquals(listOf(42), soloEnteros)
     }
-
-    // -------------------------------------------------------------------------
-    // 4. Pruebas de Type Bounds (where T Comparable T)
-    // -------------------------------------------------------------------------
 
     @Test
     fun `obtenerMaximo y obtenerMinimo deben retornar el valor extremo para tipos Comparables`() {
@@ -127,10 +113,6 @@ class ContenedorProcesableTest {
         assertNull(vacio.obtenerMaximo())
         assertNull(vacio.obtenerMinimo())
     }
-
-    // -------------------------------------------------------------------------
-    // 5. Pruebas de Receiver / Scope function (with / ejecutarOperacion)
-    // -------------------------------------------------------------------------
 
     @Test
     fun `ejecutarOperacion debe permitir operacion con receptor this`() {

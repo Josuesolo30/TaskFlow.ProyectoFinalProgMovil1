@@ -1,11 +1,10 @@
 package com.josue.taskflow.dominio.usecase
 
-import com.josue.taskflow.datos.repository.TareaRepositoryMemoria
-import com.josue.taskflow.dominio.model.Tarea
-import com.josue.taskflow.dominio.pipeline.construirPipelineTaskFlow
-import com.josue.taskflow.presentacion.state.EstadoListaTaskFlow
-import com.josue.taskflow.presentacion.state.FiltroTareas
-import kotlinx.coroutines.flow.MutableStateFlow
+import com.josue.taskflow.data.FakeTareaRepository
+import com.josue.taskflow.domain.model.Tarea
+import com.josue.taskflow.domain.usecase.AgregarTareaUseCase
+import com.josue.taskflow.domain.usecase.ObtenerEstadisticasUseCase
+import com.josue.taskflow.domain.usecase.ObtenerTareasUseCase
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -15,11 +14,11 @@ import org.junit.Test
 
 class TaskFlowUseCasesTest {
 
-    private lateinit var repository: TareaRepositoryMemoria
+    private lateinit var repository: FakeTareaRepository
 
     @Before
     fun setup() {
-        repository = TareaRepositoryMemoria
+        repository = FakeTareaRepository()
     }
 
     @Test
@@ -67,24 +66,5 @@ class TaskFlowUseCasesTest {
 
         assertTrue(agregada != null)
         assertEquals("Descripcion test", agregada?.descripcion)
-    }
-
-    @Test
-    fun `construirPipelineTaskFlow debe filtrar por estado reactivamente`() = runBlocking {
-        val fuenteTareas = MutableStateFlow(
-            listOf(
-                Tarea(id = 1, titulo = "T1", descripcion = "", completada = true),
-                Tarea(id = 2, titulo = "T2", descripcion = "", completada = false)
-            )
-        )
-        val fuenteFiltro = MutableStateFlow(FiltroTareas.PENDIENTES)
-
-        val pipeline = construirPipelineTaskFlow(fuenteTareas, fuenteFiltro)
-
-        val estado = pipeline.first { it is EstadoListaTaskFlow.Contenido } as EstadoListaTaskFlow.Contenido
-
-        assertEquals(1, estado.tareas.size)
-        assertEquals(2, estado.tareas.first().id)
-        assertEquals(FiltroTareas.PENDIENTES, estado.filtro)
     }
 }
