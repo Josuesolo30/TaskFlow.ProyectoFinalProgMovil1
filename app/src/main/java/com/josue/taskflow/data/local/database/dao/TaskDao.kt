@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.Flow
 
 /**
  * DAO de Room para operaciones SQL sobre la tabla 'tareas'.
+ * Las operaciones de modificación retornan el número de filas afectadas para verificar el éxito real.
  */
 @Dao
 interface TaskDao {
@@ -24,13 +25,19 @@ interface TaskDao {
     suspend fun getTaskById(taskId: Int): TaskEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertTask(task: TaskEntity)
+    suspend fun insertTask(task: TaskEntity): Long
 
     @Update
-    suspend fun updateTask(task: TaskEntity)
+    suspend fun updateTask(task: TaskEntity): Int
+
+    @Query("UPDATE tareas SET descripcion = :description WHERE id = :taskId")
+    suspend fun updateDescription(taskId: Int, description: String): Int
+
+    @Query("UPDATE tareas SET completada = CASE WHEN completada = 1 THEN 0 ELSE 1 END WHERE id = :taskId")
+    suspend fun toggleCompletion(taskId: Int): Int
 
     @Query("DELETE FROM tareas WHERE id = :taskId")
-    suspend fun deleteTask(taskId: Int)
+    suspend fun deleteTask(taskId: Int): Int
 
     @Query("SELECT COUNT(*) FROM tareas")
     suspend fun getTaskCount(): Int

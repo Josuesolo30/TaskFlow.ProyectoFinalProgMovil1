@@ -3,7 +3,6 @@ package com.josue.taskflow.ui.screen.taskdetail
 import androidx.lifecycle.SavedStateHandle
 import com.josue.taskflow.data.FakeSettingsRepository
 import com.josue.taskflow.data.FakeTaskRepository
-import com.josue.taskflow.domain.model.task.TaskOperationResult
 import com.josue.taskflow.domain.usecase.task.TaskUseCase
 import com.josue.taskflow.ui.screen.taskdetail.model.TaskDetailUiState
 import com.josue.taskflow.ui.screen.taskdetail.viewmodel.TaskDetailViewModel
@@ -44,29 +43,25 @@ class TaskDetailViewModelTest {
     }
 
     @Test
-    fun `deleteTask en tarea existente retorna Success`() = runTest {
+    fun `deleteTask en tarea existente produce DeletionSuccess`() = runTest {
         val savedStateHandle = SavedStateHandle(mapOf("taskId" to 1))
         val viewModel = TaskDetailViewModel(savedStateHandle, taskUseCase)
 
-        var result: TaskOperationResult? = null
-        viewModel.deleteTask { res ->
-            result = res
-        }
+        viewModel.deleteTask()
 
-        assertEquals(TaskOperationResult.Success, result)
+        val state = viewModel.uiState.first { it is TaskDetailUiState.DeletionSuccess }
+        assertEquals(TaskDetailUiState.DeletionSuccess, state)
     }
 
     @Test
-    fun `deleteTask cuando falla no retorna Success`() = runTest {
+    fun `deleteTask cuando falla muestra error y permanece en la pantalla`() = runTest {
         taskRepository.shouldFail = true
         val savedStateHandle = SavedStateHandle(mapOf("taskId" to 1))
         val viewModel = TaskDetailViewModel(savedStateHandle, taskUseCase)
 
-        var result: TaskOperationResult? = null
-        viewModel.deleteTask { res ->
-            result = res
-        }
+        viewModel.deleteTask()
 
-        assertTrue(result is TaskOperationResult.Failure)
+        val state = viewModel.uiState.first { it is TaskDetailUiState.Content && it.operationError != null } as TaskDetailUiState.Content
+        assertTrue(state.operationError != null)
     }
 }

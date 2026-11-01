@@ -7,6 +7,7 @@ import com.josue.taskflow.domain.model.task.TaskOperationResult
 import com.josue.taskflow.domain.usecase.task.TaskUseCase
 import com.josue.taskflow.ui.screen.taskdetail.model.TaskDetailUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -18,7 +19,7 @@ import javax.inject.Inject
 
 /**
  * ViewModel propio para la pantalla de Detalle de Tarea.
- * Obtiene taskId a través de SavedStateHandle.
+ * Administra las operaciones de escritura y los estados de resultado de borrado/guardado.
  */
 @HiltViewModel
 class TaskDetailViewModel @Inject constructor(
@@ -31,19 +32,47 @@ class TaskDetailViewModel @Inject constructor(
     private val isSavingState = MutableStateFlow(false)
     private val isDeletingState = MutableStateFlow(false)
     private val operationErrorState = MutableStateFlow<String?>(null)
+    private val isDeletionSuccessfulState = MutableStateFlow(false)
+    private val saveSuccessEventState = MutableStateFlow(false)
+
+    private data class InternalDetailState(
+        val isSaving: Boolean,
+        val isDeleting: Boolean,
+        val operationError: String?,
+        val isDeletionSuccessful: Boolean,
+        val saveSuccessEvent: Boolean
+    )
+
+    private val internalState = combine(
+        isSavingState,
+        isDeletingState,
+        operationErrorState,
+        isDeletionSuccessfulState,
+        saveSuccessEventState
+    ) { isSaving, isDeleting, operationError, isDeletionSuccessful, saveSuccessEvent ->
+        InternalDetailState(
+            isSaving = isSaving,
+            isDeleting = isDeleting,
+            operationError = operationError,
+            isDeletionSuccessful = isDeletionSuccessful,
+            saveSuccessEvent = saveSuccessEvent
+        )
+    }
 
     val uiState: StateFlow<TaskDetailUiState> = combine(
         taskUseCase.observeTask(taskId),
-        isSavingState,
-        isDeletingState,
-        operationErrorState
-    ) { task, isSaving, isDeleting, operationError ->
-        if (task != null) {
+        internalState
+    ) { task, internal ->
+        if (internal.isDeletionSuccessful) {
+            TaskDetailUiState.DeletionSuccess
+        } else if (task != null) {
             TaskDetailUiState.Content(
                 task = task,
-                isSaving = isSaving,
-                isDeleting = isDeleting,
-                operationError = operationError
+                isSaving = internal.isSaving,
+                isDeleting = internal.isDeleting,
+                operationError = internal.operationError,
+                isDeletionSuccessful = internal.isDeletionSuccessful,
+                saveSuccessEvent = internal.saveSuccessEvent
             )
         } else {
             TaskDetailUiState.NotFound
@@ -60,39 +89,80 @@ class TaskDetailViewModel @Inject constructor(
 
     fun toggleCompletion() {
         viewModelScope.launch {
-            taskUseCase.toggleCompletion(taskId)
+            operationErrorState.value = null
+            try {
+                val result = taskUseCase.toggleCompletion(taskId)
+                if (result is TaskOperationResult.Failure) {
+                    operationErrorState.value = result.cause?.message ?: "Error al cambiar estado"
+                } else if (result is TaskOperationResult.TaskNotFound) {
+                    operationErrorState.value = "La tarea ya no existe"
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                operationErrorState.value = e.message ?: "Error inesperado"
+            }
         }
     }
 
-    fun updateDescription(
-        description: String,
-        onResult: (TaskOperationResult) -> Unit = {}
-    ) {
+    fun updateDescription(description: String) {
         viewModelScope.launch {
             isSavingState.value = true
             operationErrorState.value = null
-            val result = taskUseCase.updateDescription(taskId, description)
-            isSavingState.value = false
-
-            if (result is TaskOperationResult.Failure) {
-                operationErrorState.value = result.cause?.message ?: "Error al guardar la descripción"
+            try {
+                when (val result = taskUseCase.updateDescription(taskId, description)) {
+                    TaskOperationResult.Success -> {
+                        saveSuccessEventState.value = true
+                    }
+                    TaskOperationResult.TaskNotFound -> {
+                        operationErrorState.value = "La tarea no fue encontrada"
+                    }
+                    TaskOperationResult.InvalidTitle -> {
+                        operationErrorState.value = "Título inválido"
+                    }
+                    is TaskOperationResult.Failure -> {
+                        operationErrorState.value = result.cause?.message ?: "Error al guardar la descripción"
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                operationErrorState.value = e.message ?: "Error al guardar descripción"
+            } finally {
+                isSavingState.value = false
             }
-            onResult(result)
         }
     }
 
-    fun deleteTask(onResult: (TaskOperationResult) -> Unit) {
+    fun deleteTask() {
         viewModelScope.launch {
             isDeletingState.value = true
             operationErrorState.value = null
-            val result = taskUseCase.deleteTask(taskId)
-            isDeletingState.value = false
-
-            if (result is TaskOperationResult.Failure) {
-                operationErrorState.value = result.cause?.message ?: "Error al eliminar la tarea"
+            try {
+                when (val result = taskUseCase.deleteTask(taskId)) {
+                    TaskOperationResult.Success -> {
+                        isDeletionSuccessfulState.value = true
+                    }
+                    TaskOperationResult.TaskNotFound -> {
+                        operationErrorState.value = "La tarea no fue encontrada"
+                    }
+                    TaskOperationResult.InvalidTitle -> {}
+                    is TaskOperationResult.Failure -> {
+                        operationErrorState.value = result.cause?.message ?: "Error al eliminar la tarea"
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                operationErrorState.value = e.message ?: "Error al eliminar la tarea"
+            } finally {
+                isDeletingState.value = false
             }
-            onResult(result)
         }
+    }
+
+    fun consumeSaveSuccessEvent() {
+        saveSuccessEventState.value = false
     }
 
     fun clearOperationError() {

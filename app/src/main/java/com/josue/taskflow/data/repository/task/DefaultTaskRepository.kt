@@ -16,7 +16,7 @@ import javax.inject.Singleton
 
 /**
  * Implementación principal de TaskRepository utilizando Room mediante TaskLocalDataSource.
- * Maneja excepciones de base de datos dentro de la Capa de Datos y retorna resultados explícitos.
+ * Verifica el número de filas afectadas y emite notificaciones únicamente tras un éxito confirmado.
  */
 @Singleton
 class DefaultTaskRepository @Inject constructor(
@@ -48,14 +48,18 @@ class DefaultTaskRepository @Inject constructor(
         }
 
         return try {
-            localDataSource.insertTask(
+            val rowId = localDataSource.insertTask(
                 TaskEntity(
                     title = cleanTitle,
                     description = description.trim()
                 )
             )
-            notificationChannel.send("msg_task_saved:$cleanTitle")
-            TaskOperationResult.Success
+            if (rowId > 0) {
+                notificationChannel.send("msg_task_saved:$cleanTitle")
+                TaskOperationResult.Success
+            } else {
+                TaskOperationResult.Failure(IllegalStateException("No se pudo insertar la fila"))
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -65,13 +69,13 @@ class DefaultTaskRepository @Inject constructor(
 
     override suspend fun toggleCompletion(taskId: Int): TaskOperationResult {
         return try {
-            val taskEntity = localDataSource.getTaskById(taskId)
-                ?: return TaskOperationResult.TaskNotFound
+            val rowsAffected = localDataSource.toggleCompletion(taskId)
+            if (rowsAffected <= 0) {
+                return TaskOperationResult.TaskNotFound
+            }
 
-            val updated = taskEntity.copy(isCompleted = !taskEntity.isCompleted)
-            localDataSource.updateTask(updated)
-
-            val msgKey = if (updated.isCompleted) "msg_task_completed" else "msg_task_pending"
+            val updatedTask = localDataSource.getTaskById(taskId)
+            val msgKey = if (updatedTask?.isCompleted == true) "msg_task_completed" else "msg_task_pending"
             notificationChannel.send(msgKey)
             TaskOperationResult.Success
         } catch (e: CancellationException) {
@@ -83,10 +87,11 @@ class DefaultTaskRepository @Inject constructor(
 
     override suspend fun updateDescription(taskId: Int, description: String): TaskOperationResult {
         return try {
-            val taskEntity = localDataSource.getTaskById(taskId)
-                ?: return TaskOperationResult.TaskNotFound
+            val rowsAffected = localDataSource.updateDescription(taskId, description.trim())
+            if (rowsAffected <= 0) {
+                return TaskOperationResult.TaskNotFound
+            }
 
-            localDataSource.updateTask(taskEntity.copy(description = description.trim()))
             notificationChannel.send("msg_description_saved")
             TaskOperationResult.Success
         } catch (e: CancellationException) {
@@ -98,11 +103,15 @@ class DefaultTaskRepository @Inject constructor(
 
     override suspend fun deleteTask(taskId: Int): TaskOperationResult {
         return try {
-            val taskEntity = localDataSource.getTaskById(taskId)
+            val existingTask = localDataSource.getTaskById(taskId)
                 ?: return TaskOperationResult.TaskNotFound
 
-            localDataSource.deleteTask(taskId)
-            notificationChannel.send("msg_task_deleted:${taskEntity.title}")
+            val rowsAffected = localDataSource.deleteTask(taskId)
+            if (rowsAffected <= 0) {
+                return TaskOperationResult.TaskNotFound
+            }
+
+            notificationChannel.send("msg_task_deleted:${existingTask.title}")
             TaskOperationResult.Success
         } catch (e: CancellationException) {
             throw e

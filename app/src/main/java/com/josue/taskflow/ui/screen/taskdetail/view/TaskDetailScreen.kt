@@ -38,7 +38,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.josue.taskflow.R
 import com.josue.taskflow.core.audio.TaskAudioPlayer
-import com.josue.taskflow.domain.model.task.TaskOperationResult
 import com.josue.taskflow.ui.screen.taskdetail.model.TaskDetailUiState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -48,8 +47,8 @@ import kotlinx.coroutines.launch
 fun TaskDetailScreen(
     uiState: TaskDetailUiState,
     onToggleCompletion: () -> Unit,
-    onSaveDescription: (String, (TaskOperationResult) -> Unit) -> Unit,
-    onDeleteTask: ((TaskOperationResult) -> Unit) -> Unit,
+    onSaveDescription: (String) -> Unit,
+    onDeleteTask: () -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -87,7 +86,7 @@ fun TaskDetailScreen(
                 .padding(innerPadding)
         ) {
             when (uiState) {
-                is TaskDetailUiState.Loading -> {
+                is TaskDetailUiState.Loading, TaskDetailUiState.DeletionSuccess -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
@@ -182,13 +181,7 @@ fun TaskDetailScreen(
                         )
 
                         Button(
-                            onClick = {
-                                onSaveDescription(editedDescription) { result ->
-                                    if (result is TaskOperationResult.Success) {
-                                        editedDescription = editedDescription.trim()
-                                    }
-                                }
-                            },
+                            onClick = { onSaveDescription(editedDescription) },
                             enabled = editedDescription.trim() != task.description && !isSaving && !isDeleting,
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -297,11 +290,7 @@ fun TaskDetailScreen(
                     Button(
                         onClick = {
                             showDeleteConfirmation = false
-                            onDeleteTask { result ->
-                                if (result is TaskOperationResult.Success) {
-                                    onBack()
-                                }
-                            }
+                            onDeleteTask()
                         },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.error

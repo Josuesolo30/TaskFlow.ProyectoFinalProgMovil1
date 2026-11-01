@@ -23,15 +23,23 @@ class TaskLocalDataSource @Inject constructor(
         return taskDao.getTaskById(taskId)
     }
 
-    suspend fun insertTask(task: TaskEntity) {
-        taskDao.insertTask(task)
+    suspend fun insertTask(task: TaskEntity): Long {
+        return taskDao.insertTask(task)
     }
 
-    suspend fun updateTask(task: TaskEntity) {
-        taskDao.updateTask(task)
+    suspend fun updateTask(task: TaskEntity): Int {
+        return taskDao.updateTask(task)
     }
 
-    suspend fun deleteTask(taskId: Int) {
-        taskDao.deleteTask(taskId)
+    suspend fun updateDescription(taskId: Int, description: String): Int {
+        return taskDao.updateDescription(taskId, description)
+    }
+
+    suspend fun toggleCompletion(taskId: Int): Int {
+        return taskDao.toggleCompletion(taskId)
+    }
+
+    suspend fun deleteTask(taskId: Int): Int {
+        return taskDao.deleteTask(taskId)
     }
 }
