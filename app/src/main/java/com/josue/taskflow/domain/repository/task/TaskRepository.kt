@@ -1,6 +1,7 @@
 package com.josue.taskflow.domain.repository.task
 
 import com.josue.taskflow.domain.model.task.Task
+import com.josue.taskflow.domain.model.task.TaskOperationResult
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -13,11 +14,11 @@ interface TaskRepository {
 
     fun getNotificationsStream(): Flow<String>
 
-    suspend fun addTask(title: String, description: String = "")
+    suspend fun addTask(title: String, description: String = ""): TaskOperationResult
 
-    suspend fun toggleCompletion(taskId: Int)
+    suspend fun toggleCompletion(taskId: Int): TaskOperationResult
 
-    suspend fun updateDescription(taskId: Int, description: String)
+    suspend fun updateDescription(taskId: Int, description: String): TaskOperationResult
 
-    suspend fun deleteTask(taskId: Int)
+    suspend fun deleteTask(taskId: Int): TaskOperationResult
 }

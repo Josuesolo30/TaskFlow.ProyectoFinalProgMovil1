@@ -9,7 +9,10 @@ sealed interface TaskDetailUiState {
     data object Loading : TaskDetailUiState
 
     data class Content(
-        val task: Task
+        val task: Task,
+        val isSaving: Boolean = false,
+        val isDeleting: Boolean = false,
+        val operationError: String? = null
     ) : TaskDetailUiState
 
     data object NotFound : TaskDetailUiState

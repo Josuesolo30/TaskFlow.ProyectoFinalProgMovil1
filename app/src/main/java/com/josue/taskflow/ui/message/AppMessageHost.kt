@@ -5,24 +5,29 @@ import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import com.josue.taskflow.R
 import kotlinx.coroutines.flow.Flow
 
 /**
- * Consumidor único de notificaciones de confirmación a nivel de raíz de UI.
- * Mapea mensajes o códigos de confirmación en inglés a cadenas en español desde strings.xml.
+ * Consumidor único de notificaciones a nivel de raíz de UI con repeatOnLifecycle(State.STARTED).
  */
 @Composable
 fun AppMessageHost(
     notificationsStream: Flow<String>
 ) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
 
-    LaunchedEffect(notificationsStream) {
-        notificationsStream.collect { rawCode ->
-            val message = resolveNotificationMessage(context, rawCode)
-            if (message.isNotBlank()) {
-                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+    LaunchedEffect(notificationsStream, lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            notificationsStream.collect { rawCode ->
+                val message = resolveNotificationMessage(context, rawCode)
+                if (message.isNotBlank()) {
+                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }

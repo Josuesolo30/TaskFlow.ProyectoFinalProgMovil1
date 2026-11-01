@@ -38,7 +38,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.josue.taskflow.R
 import com.josue.taskflow.core.audio.TaskAudioPlayer
+import com.josue.taskflow.domain.model.task.TaskOperationResult
 import com.josue.taskflow.ui.screen.taskdetail.model.TaskDetailUiState
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -46,8 +48,8 @@ import kotlinx.coroutines.launch
 fun TaskDetailScreen(
     uiState: TaskDetailUiState,
     onToggleCompletion: () -> Unit,
-    onSaveDescription: (String) -> Unit,
-    onDeleteTask: () -> Unit,
+    onSaveDescription: (String, (TaskOperationResult) -> Unit) -> Unit,
+    onDeleteTask: ((TaskOperationResult) -> Unit) -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -132,6 +134,9 @@ fun TaskDetailScreen(
 
                 is TaskDetailUiState.Content -> {
                     val task = uiState.task
+                    val isSaving = uiState.isSaving
+                    val isDeleting = uiState.isDeleting
+
                     var editedDescription by rememberSaveable(task.id, task.description) {
                         mutableStateOf(task.description)
                     }
@@ -143,6 +148,14 @@ fun TaskDetailScreen(
                             .padding(20.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
+                        if (uiState.operationError != null) {
+                            Text(
+                                text = uiState.operationError,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+
                         Text(
                             text = task.title,
                             style = MaterialTheme.typography.headlineSmall
@@ -164,12 +177,19 @@ fun TaskDetailScreen(
                             label = { Text(stringResource(R.string.task_description_label)) },
                             minLines = 4,
                             maxLines = 8,
+                            enabled = !isSaving && !isDeleting,
                             modifier = Modifier.fillMaxWidth()
                         )
 
                         Button(
-                            onClick = { onSaveDescription(editedDescription) },
-                            enabled = editedDescription.trim() != task.description,
+                            onClick = {
+                                onSaveDescription(editedDescription) { result ->
+                                    if (result is TaskOperationResult.Success) {
+                                        editedDescription = editedDescription.trim()
+                                    }
+                                }
+                            },
+                            enabled = editedDescription.trim() != task.description && !isSaving && !isDeleting,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .sizeIn(minHeight = 48.dp)
@@ -179,6 +199,7 @@ fun TaskDetailScreen(
 
                         Button(
                             onClick = onToggleCompletion,
+                            enabled = !isSaving && !isDeleting,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .sizeIn(minHeight = 48.dp)
@@ -200,6 +221,8 @@ fun TaskDetailScreen(
                                         try {
                                             val textToRead = "Tarea: ${task.title}. Descripción: ${task.description.ifBlank { "Sin descripción" }}"
                                             audioPlayer.playText(textToRead)
+                                        } catch (e: CancellationException) {
+                                            throw e
                                         } catch (e: Exception) {
                                             Toast.makeText(context, context.getString(R.string.audio_error), Toast.LENGTH_SHORT).show()
                                         } finally {
@@ -208,6 +231,7 @@ fun TaskDetailScreen(
                                     }
                                 }
                             },
+                            enabled = !isSaving && !isDeleting,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .sizeIn(minHeight = 48.dp)
@@ -239,6 +263,7 @@ fun TaskDetailScreen(
                                     Intent.createChooser(intent, context.getString(R.string.share_chooser_title))
                                 )
                             },
+                            enabled = !isSaving && !isDeleting,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .sizeIn(minHeight = 48.dp)
@@ -248,6 +273,7 @@ fun TaskDetailScreen(
 
                         Button(
                             onClick = { showDeleteConfirmation = true },
+                            enabled = !isSaving && !isDeleting,
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.error
                             ),
@@ -271,7 +297,11 @@ fun TaskDetailScreen(
                     Button(
                         onClick = {
                             showDeleteConfirmation = false
-                            onDeleteTask()
+                            onDeleteTask { result ->
+                                if (result is TaskOperationResult.Success) {
+                                    onBack()
+                                }
+                            }
                         },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.error

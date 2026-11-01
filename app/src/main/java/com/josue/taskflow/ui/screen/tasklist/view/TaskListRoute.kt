@@ -26,6 +26,7 @@ fun TaskListRoute(
         onToggleCompletion = viewModel::toggleCompletion,
         onDeleteTask = viewModel::deleteTask,
         onOpenDetail = onOpenDetail,
+        onClearError = viewModel::clearOperationError,
         onBack = onBack
     )
 }

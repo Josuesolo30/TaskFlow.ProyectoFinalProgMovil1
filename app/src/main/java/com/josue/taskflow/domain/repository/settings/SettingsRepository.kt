@@ -4,7 +4,7 @@ import com.josue.taskflow.domain.model.task.TaskFilter
 import kotlinx.coroutines.flow.Flow
 
 /**
- * Contrato del repositorio de configuraciones/preferencias para la Capa de Dominio.
+ * Contrato del repositorio de configuraciones para la Capa de Dominio.
  */
 interface SettingsRepository {
     fun getFilterStream(): Flow<TaskFilter>

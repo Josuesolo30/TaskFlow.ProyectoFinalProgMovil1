@@ -5,10 +5,12 @@ import androidx.lifecycle.viewModelScope
 import com.josue.taskflow.core.collection.ProcessableContainer
 import com.josue.taskflow.core.collection.sorted
 import com.josue.taskflow.domain.model.task.TaskFilter
+import com.josue.taskflow.domain.model.task.TaskOperationResult
 import com.josue.taskflow.domain.usecase.task.TaskUseCase
 import com.josue.taskflow.ui.screen.tasklist.model.TaskListUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
@@ -27,6 +29,9 @@ class TaskListViewModel @Inject constructor(
     private val taskUseCase: TaskUseCase
 ) : ViewModel() {
 
+    private val isSubmittingState = MutableStateFlow(false)
+    private val operationErrorState = MutableStateFlow<String?>(null)
+
     val activeFilter: StateFlow<TaskFilter> = taskUseCase.observeFilter()
         .stateIn(
             scope = viewModelScope,
@@ -36,8 +41,10 @@ class TaskListViewModel @Inject constructor(
 
     val uiState: StateFlow<TaskListUiState> = combine(
         taskUseCase.observeTasks(),
-        activeFilter
-    ) { tasks, filter ->
+        activeFilter,
+        isSubmittingState,
+        operationErrorState
+    ) { tasks, filter, isSubmitting, operationError ->
         val cleanTasks = tasks
             .map { task -> task.copy(title = task.title.trim()) }
             .filter { task -> task.title.isNotBlank() }
@@ -51,11 +58,17 @@ class TaskListViewModel @Inject constructor(
         }
 
         if (visibleTasks.isEmpty()) {
-            TaskListUiState.Empty(activeFilter = filter)
+            TaskListUiState.Empty(
+                activeFilter = filter,
+                isSubmitting = isSubmitting,
+                operationError = operationError
+            )
         } else {
             TaskListUiState.Content(
                 tasks = visibleTasks,
-                activeFilter = filter
+                activeFilter = filter,
+                isSubmitting = isSubmitting,
+                operationError = operationError
             )
         }
     }
@@ -80,9 +93,33 @@ class TaskListViewModel @Inject constructor(
         }
     }
 
-    fun addTask(title: String, description: String = "") {
+    fun addTask(
+        title: String,
+        description: String = "",
+        onResult: (TaskOperationResult) -> Unit
+    ) {
         viewModelScope.launch {
-            taskUseCase.addTask(title, description)
+            isSubmittingState.value = true
+            operationErrorState.value = null
+            val result = taskUseCase.addTask(title, description)
+            isSubmittingState.value = false
+
+            when (result) {
+                TaskOperationResult.Success -> {
+                    onResult(result)
+                }
+                TaskOperationResult.InvalidTitle -> {
+                    operationErrorState.value = "El título de la tarea no puede estar vacío"
+                    onResult(result)
+                }
+                is TaskOperationResult.Failure -> {
+                    operationErrorState.value = result.cause?.message ?: "Error al guardar la tarea"
+                    onResult(result)
+                }
+                TaskOperationResult.TaskNotFound -> {
+                    onResult(result)
+                }
+            }
         }
     }
 
@@ -96,5 +133,9 @@ class TaskListViewModel @Inject constructor(
         viewModelScope.launch {
             taskUseCase.deleteTask(taskId)
         }
+    }
+
+    fun clearOperationError() {
+        operationErrorState.value = null
     }
 }

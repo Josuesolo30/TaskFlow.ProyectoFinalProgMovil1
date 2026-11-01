@@ -6,8 +6,10 @@ import com.josue.taskflow.core.collection.minOrNull
 import com.josue.taskflow.domain.model.statistics.TaskStatistics
 import com.josue.taskflow.domain.model.task.Task
 import com.josue.taskflow.domain.model.task.TaskFilter
+import com.josue.taskflow.domain.model.task.TaskOperationResult
 import com.josue.taskflow.domain.repository.settings.SettingsRepository
 import com.josue.taskflow.domain.repository.task.TaskRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -17,8 +19,7 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /**
- * Caso de Uso unificado que agrupa todas las operaciones de dominio de la funcionalidad de tareas.
- * Inyecta [TaskRepository] y [SettingsRepository].
+ * Caso de Uso unificado con operaciones explícitas sobre la funcionalidad de tareas.
  */
 class TaskUseCase @Inject constructor(
     private val taskRepository: TaskRepository,
@@ -33,27 +34,35 @@ class TaskUseCase @Inject constructor(
 
     fun observeNotifications(): Flow<String> = taskRepository.getNotificationsStream()
 
-    suspend fun saveFilter(filter: TaskFilter) {
-        settingsRepository.saveFilter(filter)
-    }
-
-    suspend fun addTask(title: String, description: String = "") {
-        val cleanTitle = title.trim()
-        if (cleanTitle.isNotBlank()) {
-            taskRepository.addTask(title = cleanTitle, description = description.trim())
+    suspend fun saveFilter(filter: TaskFilter): TaskOperationResult {
+        return try {
+            settingsRepository.saveFilter(filter)
+            TaskOperationResult.Success
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            TaskOperationResult.Failure(e)
         }
     }
 
-    suspend fun toggleCompletion(taskId: Int) {
-        taskRepository.toggleCompletion(taskId)
+    suspend fun addTask(title: String, description: String = ""): TaskOperationResult {
+        val cleanTitle = title.trim()
+        if (cleanTitle.isBlank()) {
+            return TaskOperationResult.InvalidTitle
+        }
+        return taskRepository.addTask(title = cleanTitle, description = description.trim())
     }
 
-    suspend fun updateDescription(taskId: Int, description: String) {
-        taskRepository.updateDescription(taskId, description.trim())
+    suspend fun toggleCompletion(taskId: Int): TaskOperationResult {
+        return taskRepository.toggleCompletion(taskId)
     }
 
-    suspend fun deleteTask(taskId: Int) {
-        taskRepository.deleteTask(taskId)
+    suspend fun updateDescription(taskId: Int, description: String): TaskOperationResult {
+        return taskRepository.updateDescription(taskId, description.trim())
+    }
+
+    suspend fun deleteTask(taskId: Int): TaskOperationResult {
+        return taskRepository.deleteTask(taskId)
     }
 
     fun observeStatistics(): Flow<TaskStatistics> {

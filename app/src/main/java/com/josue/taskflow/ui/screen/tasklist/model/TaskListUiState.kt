@@ -11,11 +11,15 @@ sealed interface TaskListUiState {
 
     data class Content(
         val tasks: List<Task>,
-        val activeFilter: TaskFilter
+        val activeFilter: TaskFilter,
+        val isSubmitting: Boolean = false,
+        val operationError: String? = null
     ) : TaskListUiState
 
     data class Empty(
-        val activeFilter: TaskFilter
+        val activeFilter: TaskFilter,
+        val isSubmitting: Boolean = false,
+        val operationError: String? = null
     ) : TaskListUiState
 
     data class Error(

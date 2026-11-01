@@ -1,5 +1,6 @@
 package com.josue.taskflow.ui.screen.tasklist.view
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
@@ -39,6 +41,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.josue.taskflow.R
 import com.josue.taskflow.domain.model.task.TaskFilter
+import com.josue.taskflow.domain.model.task.TaskOperationResult
 import com.josue.taskflow.ui.components.TaskCard
 import com.josue.taskflow.ui.screen.tasklist.model.TaskListUiState
 
@@ -48,10 +51,11 @@ fun TaskListScreen(
     uiState: TaskListUiState,
     activeFilter: TaskFilter,
     onSelectFilter: (TaskFilter) -> Unit,
-    onAddTask: (String, String) -> Unit,
+    onAddTask: (String, String, (TaskOperationResult) -> Unit) -> Unit,
     onToggleCompletion: (Int) -> Unit,
     onDeleteTask: (Int) -> Unit,
     onOpenDetail: (Int) -> Unit,
+    onClearError: () -> Unit,
     onBack: () -> Unit
 ) {
     var showCreateDialog by rememberSaveable { mutableStateOf(false) }
@@ -61,6 +65,18 @@ fun TaskListScreen(
     var taskToDeleteId by rememberSaveable { mutableStateOf<Int?>(null) }
 
     val listState = rememberLazyListState()
+
+    val isSubmitting = when (uiState) {
+        is TaskListUiState.Content -> uiState.isSubmitting
+        is TaskListUiState.Empty -> uiState.isSubmitting
+        else -> false
+    }
+
+    val operationError = when (uiState) {
+        is TaskListUiState.Content -> uiState.operationError
+        is TaskListUiState.Empty -> uiState.operationError
+        else -> null
+    }
 
     Scaffold(
         topBar = {
@@ -78,7 +94,10 @@ fun TaskListScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { showCreateDialog = true },
+                onClick = {
+                    onClearError()
+                    showCreateDialog = true
+                },
                 modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
             ) {
                 Icon(
@@ -94,8 +113,11 @@ fun TaskListScreen(
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
+            // Fila de filtros con desplazamiento horizontal para pantallas estrechas y fuentes al 200%
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 TaskFilter.entries.forEach { filter ->
@@ -184,18 +206,31 @@ fun TaskListScreen(
         if (showCreateDialog) {
             AlertDialog(
                 onDismissRequest = {
-                    showCreateDialog = false
-                    newTitle = ""
-                    newDescription = ""
+                    if (!isSubmitting) {
+                        showCreateDialog = false
+                        newTitle = ""
+                        newDescription = ""
+                        onClearError()
+                    }
                 },
                 title = { Text(stringResource(R.string.new_task_dialog_title)) },
                 text = {
                     Column {
+                        if (operationError != null) {
+                            Text(
+                                text = operationError,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                        }
+
                         OutlinedTextField(
                             value = newTitle,
                             onValueChange = { newTitle = it },
                             label = { Text(stringResource(R.string.task_title_label)) },
                             singleLine = true,
+                            enabled = !isSubmitting,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .sizeIn(minHeight = 48.dp)
@@ -209,6 +244,7 @@ fun TaskListScreen(
                             label = { Text(stringResource(R.string.task_description_label)) },
                             minLines = 3,
                             maxLines = 5,
+                            enabled = !isSubmitting,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -216,14 +252,15 @@ fun TaskListScreen(
                 confirmButton = {
                     Button(
                         onClick = {
-                            if (newTitle.isNotBlank()) {
-                                onAddTask(newTitle, newDescription)
-                                newTitle = ""
-                                newDescription = ""
-                                showCreateDialog = false
+                            onAddTask(newTitle, newDescription) { result ->
+                                if (result is TaskOperationResult.Success) {
+                                    newTitle = ""
+                                    newDescription = ""
+                                    showCreateDialog = false
+                                }
                             }
                         },
-                        enabled = newTitle.isNotBlank(),
+                        enabled = newTitle.isNotBlank() && !isSubmitting,
                         modifier = Modifier.sizeIn(minHeight = 48.dp)
                     ) {
                         Text(stringResource(R.string.add_button))
@@ -232,10 +269,14 @@ fun TaskListScreen(
                 dismissButton = {
                     TextButton(
                         onClick = {
-                            showCreateDialog = false
-                            newTitle = ""
-                            newDescription = ""
+                            if (!isSubmitting) {
+                                showCreateDialog = false
+                                newTitle = ""
+                                newDescription = ""
+                                onClearError()
+                            }
                         },
+                        enabled = !isSubmitting,
                         modifier = Modifier.sizeIn(minHeight = 48.dp)
                     ) {
                         Text(stringResource(R.string.cancel_button))

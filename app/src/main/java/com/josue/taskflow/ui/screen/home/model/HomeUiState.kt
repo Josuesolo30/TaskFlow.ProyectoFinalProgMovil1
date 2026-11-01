@@ -3,10 +3,10 @@ package com.josue.taskflow.ui.screen.home.model
 import com.josue.taskflow.domain.model.statistics.TaskStatistics
 
 /**
- * Estado de interfaz para la pantalla de Inicio.
+ * Estados de la pantalla de Inicio.
  */
-data class HomeUiState(
-    val statistics: TaskStatistics = TaskStatistics(),
-    val isLoading: Boolean = true,
-    val errorMessage: String? = null
-)
+sealed interface HomeUiState {
+    data object Loading : HomeUiState
+    data class Content(val statistics: TaskStatistics) : HomeUiState
+    data class Error(val message: String) : HomeUiState
+}

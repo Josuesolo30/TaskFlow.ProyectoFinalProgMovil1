@@ -8,7 +8,6 @@ import com.josue.taskflow.ui.screen.home.viewmodel.HomeViewModel
 
 /**
  * Ruta Compose para la pantalla de Inicio.
- * Conecta el ViewModel con el HomeScreen y recolecta el estado respetando el ciclo de vida.
  */
 @Composable
 fun HomeRoute(
@@ -19,6 +18,7 @@ fun HomeRoute(
 
     HomeScreen(
         uiState = uiState,
-        onNavigateToTasks = onNavigateToTasks
+        onNavigateToTasks = onNavigateToTasks,
+        onRetry = viewModel::retry
     )
 }

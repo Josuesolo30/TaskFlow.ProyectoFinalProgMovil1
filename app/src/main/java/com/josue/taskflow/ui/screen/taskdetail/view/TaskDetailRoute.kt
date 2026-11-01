@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.josue.taskflow.domain.model.task.TaskOperationResult
 import com.josue.taskflow.ui.screen.taskdetail.viewmodel.TaskDetailViewModel
 
 /**
@@ -20,8 +21,13 @@ fun TaskDetailRoute(
         uiState = uiState,
         onToggleCompletion = viewModel::toggleCompletion,
         onSaveDescription = viewModel::updateDescription,
-        onDeleteTask = {
-            viewModel.deleteTask(onSuccess = onBack)
+        onDeleteTask = { onResult ->
+            viewModel.deleteTask { result ->
+                onResult(result)
+                if (result is TaskOperationResult.Success) {
+                    onBack()
+                }
+            }
         },
         onBack = onBack
     )
