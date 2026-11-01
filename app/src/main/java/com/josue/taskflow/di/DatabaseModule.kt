@@ -2,6 +2,7 @@ package com.josue.taskflow.di
 
 import android.content.Context
 import com.josue.taskflow.data.local.database.TaskFlowDatabase
+import com.josue.taskflow.data.local.database.dao.RemoteTaskLinkDao
 import com.josue.taskflow.data.local.database.dao.TaskDao
 import dagger.Module
 import dagger.Provides
@@ -25,5 +26,10 @@ object DatabaseModule {
     @Provides
     fun provideTaskDao(database: TaskFlowDatabase): TaskDao {
         return database.taskDao()
+    }
+
+    @Provides
+    fun provideRemoteTaskLinkDao(database: TaskFlowDatabase): RemoteTaskLinkDao {
+        return database.remoteTaskLinkDao()
     }
 }

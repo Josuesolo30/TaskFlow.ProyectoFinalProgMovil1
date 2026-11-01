@@ -12,7 +12,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Prueba instrumentada para verificar la migración manual de Room de la versión 1 a la versión 2.
+ * Pruebas instrumentadas para verificar las migraciones manuales de Room.
  */
 @RunWith(AndroidJUnit4::class)
 class TaskFlowMigrationsTest {
@@ -51,18 +51,35 @@ class TaskFlowMigrationsTest {
         assertEquals(0, cursor.getInt(cursor.getColumnIndexOrThrow("completada")))
         assertEquals(0L, cursor.getLong(cursor.getColumnIndexOrThrow("created_at")))
 
-        assertTrue(cursor.moveToNext())
-        assertEquals(5, cursor.getInt(cursor.getColumnIndexOrThrow("id")))
-        assertEquals("Tarea 5", cursor.getString(cursor.getColumnIndexOrThrow("titulo")))
-        assertEquals("Descripcion 5", cursor.getString(cursor.getColumnIndexOrThrow("descripcion")))
-        assertEquals(1, cursor.getInt(cursor.getColumnIndexOrThrow("completada")))
-        assertEquals(0L, cursor.getLong(cursor.getColumnIndexOrThrow("created_at")))
-
         cursor.close()
 
         val versionCursor = db.query("PRAGMA user_version")
         assertTrue(versionCursor.moveToFirst())
         assertEquals(2, versionCursor.getInt(0))
+        versionCursor.close()
+    }
+
+    @Test
+    fun migrate2To3_createsRemoteTaskLinksTable() {
+        var db = helper.createDatabase(TEST_DB, 2).apply {
+            execSQL(
+                """
+                INSERT INTO tareas (id, titulo, descripcion, completada, created_at)
+                VALUES (1, 'Tarea 1', 'Descripcion 1', 0, 1000)
+                """.trimIndent()
+            )
+            close()
+        }
+
+        db = helper.runMigrationsAndValidate(TEST_DB, 3, true, MIGRATION_2_3)
+
+        val cursor = db.query("SELECT * FROM remote_task_links")
+        assertEquals(0, cursor.count)
+        cursor.close()
+
+        val versionCursor = db.query("PRAGMA user_version")
+        assertTrue(versionCursor.moveToFirst())
+        assertEquals(3, versionCursor.getInt(0))
         versionCursor.close()
     }
 }

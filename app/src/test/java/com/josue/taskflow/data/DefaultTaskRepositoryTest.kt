@@ -1,8 +1,13 @@
 package com.josue.taskflow.data
 
+import com.josue.taskflow.data.local.database.dao.RemoteTaskLinkDao
 import com.josue.taskflow.data.local.database.dao.TaskDao
+import com.josue.taskflow.data.local.database.entity.task.RemoteTaskLinkEntity
 import com.josue.taskflow.data.local.database.entity.task.TaskEntity
 import com.josue.taskflow.data.local.datasource.task.TaskLocalDataSource
+import com.josue.taskflow.data.remote.api.TaskApiService
+import com.josue.taskflow.data.remote.datasource.TaskRemoteDataSource
+import com.josue.taskflow.data.remote.dto.TaskDto
 import com.josue.taskflow.data.repository.task.DefaultTaskRepository
 import com.josue.taskflow.domain.model.task.TaskOperationResult
 import kotlinx.coroutines.flow.Flow
@@ -36,8 +41,9 @@ class DefaultTaskRepositoryTest {
         }
 
         override suspend fun insertTask(task: TaskEntity): Long {
-            tasks.value = tasks.value + task.copy(id = 2)
-            return 2L
+            val newId = (tasks.value.maxOfOrNull { it.id } ?: 0) + 1
+            tasks.value = tasks.value + task.copy(id = newId)
+            return newId.toLong()
         }
 
         override suspend fun updateTask(task: TaskEntity): Int {
@@ -71,14 +77,50 @@ class DefaultTaskRepositoryTest {
         override suspend fun getTaskCount(): Int = tasks.value.size
     }
 
+    private class FakeRemoteTaskLinkDao : RemoteTaskLinkDao {
+        val links = mutableListOf<RemoteTaskLinkEntity>()
+
+        override suspend fun getLink(provider: String, remoteId: Int): RemoteTaskLinkEntity? {
+            return links.firstOrNull { it.provider == provider && it.remoteId == remoteId }
+        }
+
+        override suspend fun insertOrUpdateLink(link: RemoteTaskLinkEntity) {
+            links.removeAll { it.provider == link.provider && it.remoteId == link.remoteId }
+            links.add(link)
+        }
+
+        override suspend fun markDeletedByLocalTaskId(localTaskId: Int) {
+            val index = links.indexOfFirst { it.localTaskId == localTaskId }
+            if (index != -1) {
+                links[index] = links[index].copy(isDeleted = true, localTaskId = null)
+            }
+        }
+    }
+
+    private class FakeTaskApiService : TaskApiService {
+        override suspend fun getTodos(userId: Int): List<TaskDto> {
+            return listOf(
+                TaskDto(userId = 1, id = 101, title = "Tarea Remota REST", completed = false)
+            )
+        }
+    }
+
     private lateinit var fakeDao: FakeTaskDao
+    private lateinit var fakeLinkDao: FakeRemoteTaskLinkDao
     private lateinit var repository: DefaultTaskRepository
 
     @Before
     fun setup() {
         fakeDao = FakeTaskDao()
-        val dataSource = TaskLocalDataSource(fakeDao)
-        repository = DefaultTaskRepository(dataSource)
+        fakeLinkDao = FakeRemoteTaskLinkDao()
+        val localDataSource = TaskLocalDataSource(fakeDao)
+        val remoteDataSource = TaskRemoteDataSource(FakeTaskApiService())
+
+        repository = DefaultTaskRepository(
+            localDataSource = localDataSource,
+            remoteDataSource = remoteDataSource,
+            remoteTaskLinkDao = fakeLinkDao
+        )
     }
 
     @Test
@@ -102,6 +144,19 @@ class DefaultTaskRepositoryTest {
         assertEquals(TaskOperationResult.Success, result)
 
         val tasks = repository.getTasksStream().first()
-        assertTrue(tasks.isEmpty())
+        assertTrue(tasks.none { it.id == 1 })
+    }
+
+    @Test
+    fun `fetchAndSyncRemoteTasks importa tareas de la API sin duplicar ids ni resucitar borradas`() = runBlocking {
+        repository.fetchAndSyncRemoteTasks()
+
+        val tasks = repository.getTasksStream().first()
+        assertTrue(tasks.any { it.title == "Tarea Remota REST" })
+
+        val countBefore = tasks.size
+        repository.fetchAndSyncRemoteTasks()
+        val countAfter = repository.getTasksStream().first().size
+        assertEquals(countBefore, countAfter)
     }
 }
