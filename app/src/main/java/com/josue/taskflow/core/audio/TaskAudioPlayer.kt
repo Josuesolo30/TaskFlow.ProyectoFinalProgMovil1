@@ -10,7 +10,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 /**
- * Adaptador de lectura de texto a voz (TextToSpeech) para la plataforma Android.
+ * Adaptador de lectura de texto a voz (TextToSpeech) para Android.
  * Convierte los callbacks de Android TTS en llamadas suspendibles gestionadas con corrutinas.
  */
 class TaskAudioPlayer(private val context: Context) {
@@ -40,7 +40,7 @@ class TaskAudioPlayer(private val context: Context) {
         }
     }
 
-    suspend fun reproducirTexto(texto: String) {
+    suspend fun playText(text: String) {
         val player = tts ?: initTts().also { tts = it }
         val utteranceId = UUID.randomUUID().toString()
 
@@ -76,11 +76,11 @@ class TaskAudioPlayer(private val context: Context) {
                 player.stop()
             }
 
-            player.speak(texto, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
+            player.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
         }
     }
 
-    fun liberar() {
+    fun release() {
         tts?.stop()
         tts?.shutdown()
         tts = null

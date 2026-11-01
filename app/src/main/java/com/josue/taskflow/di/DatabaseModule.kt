@@ -1,8 +1,8 @@
 package com.josue.taskflow.di
 
 import android.content.Context
-import com.josue.taskflow.data.local.TareaDao
-import com.josue.taskflow.data.local.TaskFlowDatabase
+import com.josue.taskflow.data.local.database.TaskFlowDatabase
+import com.josue.taskflow.data.local.database.dao.TaskDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -23,7 +23,7 @@ object DatabaseModule {
     }
 
     @Provides
-    fun provideTareaDao(database: TaskFlowDatabase): TareaDao {
-        return database.tareaDao()
+    fun provideTaskDao(database: TaskFlowDatabase): TaskDao {
+        return database.taskDao()
     }
 }

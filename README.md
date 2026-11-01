@@ -1,82 +1,95 @@
-# TaskFlow - Laboratorios y Proyecto Integrador
+# TaskFlow - Gestor de Tareas Personales
 
-Aplicación Android para la gestión integral de tareas personales, desarrollada con **Kotlin**, **Jetpack Compose**, **Room Database**, **DataStore Preferences**, **Hilt** y **Material 3**. 
-
-Todos los conceptos de los **Laboratorios 0, 1+2, 3, 4, 5 y 6** han sido estructurados de acuerdo con las buenas prácticas de **Clean Architecture** y las lecciones del curso.
+Aplicación Android para la gestión integral de tareas personales, desarrollada con **Kotlin**, **Jetpack Compose**, **Room Database**, **DataStore Preferences**, **Hilt** y **Material 3 (Teal Theme)**. 
 
 ---
 
 ## 🏗️ Arquitectura y Estructura del Proyecto
 
-El proyecto está organizado en paquetes según la capa de responsabilidad:
+El proyecto está organizado según las recomendaciones de arquitectura de Android y Clean Architecture:
 
 ```
-com.josue.taskflow/
-├── core/                         # Herramientas utilitarias reutilizables
-│   ├── audio/TaskAudioPlayer.kt  # Adaptador suspendCancellableCoroutine para Android TextToSpeech
-│   └── collection/ContenedorProcesable.kt # Colección genérica, varianza y type bounds
-├── data/                         # Capa de Datos (Implementaciones y Fuentes)
+app/src/main/java/com/josue/taskflow/
+├── TaskFlowApplication.kt            # @HiltAndroidApp
+├── MainActivity.kt                   # @AndroidEntryPoint
+├── core/                            # Módulos core independientes
+│   ├── audio/TaskAudioPlayer.kt     # Adaptador suspendCancellableCoroutine para Android TTS
+│   └── collection/ProcessableContainer.kt # Colección genérica, varianza y type bounds
+├── data/                            # Capa de Datos (Implementaciones y Mappers)
 │   ├── local/
-│   │   ├── TareaDao.kt           # Consultas SQL para Room
-│   │   ├── TareaEntity.kt        # Entidad de la tabla 'tareas'
-│   │   ├── TaskFlowDatabase.kt   # Instancia SQLite Room
-│   │   ├── TareaLocalDataSource.kt # Operaciones locales de Room
-│   │   └── SettingsLocalDataSource.kt # Operaciones de DataStore Preferences
-│   ├── DefaultTareaRepository.kt # Repositorio principal de tareas
-│   └── DefaultSettingsRepository.kt # Repositorio de preferencias
-├── di/                           # Módulos de Inyección de Dependencias (Hilt)
-│   ├── DatabaseModule.kt         # Proveedor de Room Database y DAO
-│   ├── DataStoreModule.kt        # Proveedor de DataStore Preferences
-│   └── RepositoryModule.kt       # Binding de contratos de repositorios
-├── domain/                       # Capa de Dominio (Modelos puros y Reglas de Negocio)
-│   ├── model/Tarea.kt            # Modelo de dominio independiente de Android/Room
+│   │   ├── database/
+│   │   │   ├── dao/TaskDao.kt       # Consultas SQL Room
+│   │   │   ├── entity/task/TaskEntity.kt # Entidad de la tabla 'tareas'
+│   │   │   └── TaskFlowDatabase.kt # Base de datos SQLite Room (v1)
+│   │   └── datasource/
+│   │       ├── task/TaskLocalDataSource.kt # Fuente local Room
+│   │       └── settings/SettingsLocalDataSource.kt # Fuente local DataStore
+│   ├── mapper/task/TaskMapper.kt   # Conversión toDomain() / toEntity()
+│   └── repository/
+│       ├── task/DefaultTaskRepository.kt # Repositorio de tareas
+│       └── settings/DefaultSettingsRepository.kt # Repositorio de preferencias
+├── di/                              # Módulos de Inyección de Dependencias (Hilt)
+│   ├── DatabaseModule.kt            # Proveedor de Room Database y TaskDao
+│   ├── DataStoreModule.kt           # Proveedor de DataStore Preferences
+│   └── RepositoryModule.kt          # Binding de repositorios
+├── domain/                          # Capa de Dominio (Modelos puros y Casos de Uso)
+│   ├── model/
+│   │   ├── task/Task.kt             # Modelo puro de tarea
+│   │   ├── task/TaskFilter.kt       # Enum de filtros con decodificación legado/nuevo
+│   │   └── statistics/TaskStatistics.kt # Modelo de estadísticas
 │   ├── repository/
-│   │   ├── TareaRepository.kt    # Contrato del repositorio de tareas
-│   │   └── SettingsRepository.kt # Contrato del repositorio de preferencias
-│   └── usecase/                  # Casos de uso
-│       ├── ObtenerTareasUseCase.kt
-│       ├── AgregarTareaUseCase.kt
-│       ├── CambiarEstadoTareaUseCase.kt
-│       ├── ActualizarDescripcionUseCase.kt
-│       ├── EliminarTareaUseCase.kt
-│       ├── ObtenerEstadisticasUseCase.kt
-│       ├── ObtenerFiltroGuardadoUseCase.kt
-│       └── GuardarFiltroUseCase.kt
-└── presentation/                 # Capa de Presentación (Compose UI y ViewModels)
-    ├── components/TareaCard.kt   # Componentes visuales
-    ├── navigation/AppNavigation.kt # Rutas y NavHost
-    ├── screens/
-    │   ├── InicioScreen.kt
-    │   ├── ListaScreen.kt
-    │   └── DetalleScreen.kt
-    ├── state/
-    │   ├── EstadoListaTaskFlow.kt # Estados de pantalla (Cargando, Contenido, Vacia, Error)
-    │   └── TareaUiState.kt        # Estado UDF
-    ├── theme/                    # Tema, Colores y Tipografía
-    └── viewmodel/TareaViewModel.kt # ViewModel principal inyectado con @HiltViewModel
+│   │   ├── task/TaskRepository.kt   # Contrato de datos de tareas
+│   │   └── settings/SettingsRepository.kt # Contrato de preferencias
+│   └── usecase/
+│       └── task/TaskUseCase.kt      # Caso de uso unificado con las operaciones de tareas
+└── ui/                              # Capa de Interfaz de Usuario (Compose UI)
+    ├── components/TaskCard.kt       # Componente reutilizable con objetivo >= 48dp
+    ├── message/AppMessageHost.kt    # Receptor único de avisos Toast a nivel raíz
+    ├── navigation/
+    │   ├── AppNavHost.kt            # NavHost principal
+    │   └── AppDestination.kt        # Rutas y argumentos de navegación
+    ├── screen/
+    │   ├── home/                    # Pantalla de Inicio (Route / Screen / ViewModel / State)
+    │   │   ├── model/HomeUiState.kt
+    │   │   ├── view/HomeRoute.kt
+    │   │   ├── view/HomeScreen.kt
+    │   │   └── viewmodel/HomeViewModel.kt
+    │   ├── tasklist/                # Pantalla de Lista de Tareas
+    │   │   ├── model/TaskListUiState.kt
+    │   │   ├── view/TaskListRoute.kt
+    │   │   ├── view/TaskListScreen.kt
+    │   │   └── viewmodel/TaskListViewModel.kt
+    │   └── taskdetail/              # Pantalla de Detalle de Tarea
+    │       ├── model/TaskDetailUiState.kt
+    │       ├── view/TaskDetailRoute.kt
+    │       ├── view/TaskDetailScreen.kt
+    │       └── viewmodel/TaskDetailViewModel.kt
+    └── theme/
+        ├── ColorPalette.kt          # Paleta verde azulado Teal Material 3
+        ├── TaskFlowTheme.kt         # Temas Claro y Oscuro
+        └── Typography.kt            # Tipografía Material 3
 ```
 
 ---
 
 ## 📊 Matriz de Cumplimiento y Estado de Prácticas
 
-| Práctica | Archivo que la implementa | Estado | Evidencia o verificación pendiente |
+| Práctica | Archivo que la implementa | Estado | Evidencia o verificación realizada |
 | :--- | :--- | :--- | :--- |
-| **Navegación e Intent Implícito (Lab 0)** | `presentation/navigation/AppNavigation.kt`, `presentation/screens/DetalleScreen.kt` | **Completo** | Probado con `NavHost`, argumentos dinámicos y chooser `ACTION_SEND` para compartir tareas. |
-| **Genéricos y Funciones de Orden Superior (Lab 1+2)** | `core/collection/ContenedorProcesable.kt`, `domain/usecase/ObtenerEstadisticasUseCase.kt` | **Completo** | 12 pruebas unitarias de `ContenedorProcesable` pasadas al 100%. |
-| **Corrutinas y Callbacks a Suspend (Lab 3)** | `core/audio/TaskAudioPlayer.kt`, `domain/usecase/ObtenerEstadisticasUseCase.kt` | **Completo** | `suspendCancellableCoroutine` sobre Android TextToSpeech y `async`/`await` concurrentes probados. |
-| **Flow Reactivo y Operadores (Lab 4)** | `presentation/viewmodel/TareaViewModel.kt` | **Completo** | Combinación de Room y DataStore con `combine`, `map`, `retry` y `catch`. Pruebas al 100%. |
-| **MVVM y Clean Architecture (Lab 5)** | Capas `presentation/`, `domain/`, `data/`, `di/`, `core/` | **Completo** | Inversión de dependencias estricta. El dominio no depende de Android ni Room. |
-| **Persistencia Room Database (Lab 6)** | `data/local/TaskFlowDatabase.kt`, `data/local/TareaDao.kt`, `data/local/TareaLocalDataSource.kt` | **Completo** | CRUD completo (Crear, Leer, Editar, Eliminar) en Room SQLite verificado. |
-| **Persistencia DataStore Preferences** | `data/local/SettingsLocalDataSource.kt`, `data/DefaultSettingsRepository.kt` | **Completo** | Guarda y restaura el filtro activo (`TODAS`, `PENDIENTES`, `COMPLETADAS`) automáticamente. |
-| **Inyección de Dependencias Hilt** | `TaskFlowApplication.kt`, `di/DatabaseModule.kt`, `di/DataStoreModule.kt`, `di/RepositoryModule.kt` | **Completo** | `@HiltAndroidApp`, `@AndroidEntryPoint` y `@HiltViewModel` compilados y probados. |
+| **Vistas en Capa UI** | `ui/screen/`, `ui/components/`, `ui/theme/` | **Completo** | Todas las vistas, Compose y temas organizados bajo `ui/`. |
+| **Un Caso de Uso con Operaciones (`TaskUseCase`)** | `domain/usecase/task/TaskUseCase.kt` | **Completo** | Agrupa `observeTasks`, `observeTask`, `observeStatistics`, `observeFilter`, `saveFilter`, `addTask`, `toggleCompletion`, `updateDescription`, `deleteTask`. |
+| **Una Pantalla, Un ViewModel** | `HomeViewModel.kt`, `TaskListViewModel.kt`, `TaskDetailViewModel.kt` | **Completo** | Cada pantalla posee su propio ViewModel `@HiltViewModel` e inyectado con `hiltViewModel()`. |
+| **Subcarpetas por Pantalla y Capa** | `ui/screen/home/`, `ui/screen/tasklist/`, `ui/screen/taskdetail/`, `domain/model/`, `data/local/` | **Completo** | Subcarpetas `view`, `viewmodel` y `model` organizan cada pantalla; modelos de dominio y persistencia separados. |
+| **Nombres en Inglés y Normalización** | Todo el proyecto | **Completo** | Nombres de clases, métodos, variables e identificadores traducidos a inglés. Textos UI visibles conservados en español vía `strings.xml`. |
+| **Paleta Teal Material 3 Legible** | `ui/theme/ColorPalette.kt`, `ui/theme/TaskFlowTheme.kt` | **Completo** | Paleta Teal verde azulado con contraste verificado >= 4.5:1 para temas claro y oscuro. |
+| **Receptor Único de Mensajes** | `ui/message/AppMessageHost.kt` | **Completo** | `AppMessageHost` en la raíz de UI observa el canal de notificaciones sin competencia entre pantallas. |
+| **Persistencia Room + DataStore** | `data/local/database/`, `data/local/datasource/` | **Completo** | Conserva la tabla SQLite `"tareas"` y la clave DataStore `"filtro_tareas_activo"`. |
 
 ---
 
-## 📸 Evidencias y Capturas de Pantalla
+## 📸 Capturas de Pantalla de la Aplicación
 
-### 📱 Flujo Principal de la Aplicación
-| Pantalla de Inicio | Pantalla de Lista | Pantalla de Detalle |
+| Pantalla de Inicio (`HomeScreen`) | Pantalla de Lista (`TaskListScreen`) | Pantalla de Detalle (`TaskDetailScreen`) |
 | :---: | :---: | :---: |
 | ![Inicio](screenshots/inicio.png) | ![Lista](screenshots/lista.png) | ![Detalle](screenshots/detalle.png) |
 
@@ -87,10 +100,10 @@ com.josue.taskflow/
 * **Hilt 2.51.1** (Inyección de dependencias)
 * **Room Database 2.6.1** & **KSP**
 * **DataStore Preferences 1.1.1**
-* **Clean Architecture & MVVM**
-* **Jetpack Compose & Material 3**
+* **Clean Architecture & MVVM** (`Route` / `Screen` / `ViewModel` / `UiState`)
+* **Jetpack Compose & Material 3 (Teal Theme)**
 * **Navigation Compose 2.9.8**
-* **JUnit 4** (Pruebas unitarias)
+* **JUnit 4** (20 pruebas unitarias automatizadas)
 
 ---
 
@@ -110,22 +123,8 @@ com.josue.taskflow/
 
 ---
 
-## 🤖 Política de Uso de Inteligencia Artificial (Declaración Explícita)
-
-De acuerdo con las directrices académicas de transparencia, se declara explícitamente el uso de herramientas de **Inteligencia Artificial Generativa** como asistente de desarrollo durante la realización de este proyecto.
-
-### 🛠️ Herramientas Utilizadas
-* **Agentes de IA / Asistentes en Android Studio**: Utilizados como herramienta de apoyo y *Pair Programmer*.
-
-### 📋 Alcance y Casos de Uso Específicos
-1. **Depuración de Entorno y Reorganización de Arquitectura**:
-   * Refactorización de paquetes a Clean Architecture en inglés (`presentation`, `domain`, `data`, `di`, `core`).
-   * Configuración de Hilt e inyección de dependencias con DataStore Preferences.
-2. **Documentación y Organización del Entregable**:
-   * Redacción, maquetación en Markdown y estructuración de las matrices de cumplimiento y prácticas.
-
-### 🛡️ Declaración de Responsabilidad y Autoría
-Todo el código generado o sugerido con apoyo de IA fue revisado, probado, comprendido y validado manualmente por el autor (**Josue Rafael Piña Fermin**).
+## 📄 Documentación Adicional de Refactorización
+Consulta el reporte detallado de refactorización en [`docs/REFACTOR_REPORT.md`](docs/REFACTOR_REPORT.md) y los requerimientos del proyecto en [`REQUIREMENTS.md`](REQUIREMENTS.md).
 
 ---
 

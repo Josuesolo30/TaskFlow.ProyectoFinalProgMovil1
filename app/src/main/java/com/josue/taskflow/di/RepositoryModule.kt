@@ -1,9 +1,9 @@
 package com.josue.taskflow.di
 
-import com.josue.taskflow.data.DefaultSettingsRepository
-import com.josue.taskflow.data.DefaultTareaRepository
-import com.josue.taskflow.domain.repository.SettingsRepository
-import com.josue.taskflow.domain.repository.TareaRepository
+import com.josue.taskflow.data.repository.settings.DefaultSettingsRepository
+import com.josue.taskflow.data.repository.task.DefaultTaskRepository
+import com.josue.taskflow.domain.repository.settings.SettingsRepository
+import com.josue.taskflow.domain.repository.task.TaskRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -16,9 +16,9 @@ abstract class RepositoryModule {
 
     @Binds
     @Singleton
-    abstract fun bindTareaRepository(
-        defaultTareaRepository: DefaultTareaRepository
-    ): TareaRepository
+    abstract fun bindTaskRepository(
+        defaultTaskRepository: DefaultTaskRepository
+    ): TaskRepository
 
     @Binds
     @Singleton
