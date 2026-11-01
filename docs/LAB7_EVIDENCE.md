@@ -42,3 +42,18 @@ SELECT id, titulo, descripcion, completada, created_at FROM tareas ORDER BY id;
 * **Origen Legado**: `taskflow_legacy_preferences.xml` con clave `filtro_tareas_activo = "PENDIENTES"`.
 * **Mecanismo**: `SharedPreferencesMigration` integrado en `DataStoreModule` mediante `produceMigrations`.
 * **Resultado**: `DataStore Preferences` (`user_preferences.preferences_pb`) migra automáticamente el valor del filtro y `TaskFilter.fromStorageKey` decodifica la clave a `TaskFilter.PENDING`.
+
+---
+
+## 📸 Pasos para Guardar Capturas desde Android Studio
+
+Si deseas guardar archivos de captura de pantalla `.png` directamente desde tu emulador iniciado:
+
+1. **Iniciar el Emulador (AVD)** en Android Studio y presionar **Run** (Shift + F10).
+2. **Abrir la app TaskFlow**:
+   - Para capturar la pantalla de la app, haz clic en el ícono de la cámara 📷 en la barra lateral derecha de la ventana del emulador en Android Studio.
+3. **Abrir Database Inspector**:
+   - Ve a **View > Tool Windows > App Inspection** y selecciona el tab **Database Inspector**.
+   - Selecciona la base `taskflow_database` y ejecuta la consulta SQL para ver la nueva columna `created_at`.
+4. **Guardar las capturas**:
+   - Guarda las imágenes en la carpeta `docs/lab7/screenshots/`.
