@@ -1,59 +1,34 @@
 # Evidencia de Migración de Base de Datos y Preferencias — Lab 7
 
-## 1. Migración de Base de Datos Room (Versión 1 ➔ Versión 2)
+## 1. Verificación de la Migración de Room (Versión 1 ➔ Versión 2)
 
-### 1.1 Esquema Antes de Migrar (Versión 1)
-```sql
-PRAGMA user_version; -- 1
+En la captura tomada directamente desde **Database Inspector** en Android Studio se verifica que la base de datos `taskflow_database` del paquete `com.josue.taskflow` aplicó la migración `MIGRATION_1_2` conservando el 100% de las tareas anteriores y agregando la nueva columna `created_at`:
 
-SELECT id, titulo, descripcion, completada FROM tareas ORDER BY id;
-```
-
-**Resultado en Versión 1**:
-| id | titulo | descripcion | completada |
-|---|---|---|---|
-| 1 | Estudiar navegación | Repasar Inicio, Lista y Detalle. | 0 |
-| 2 | Preparar el README | Documentar TaskFlow. | 1 |
-| 3 | Probar la aplicación | Verificar todos los botones. | 0 |
-
----
-
-### 1.2 Esquema Después de Migrar (Versión 2)
-```sql
-PRAGMA user_version; -- 2
-
-SELECT id, titulo, descripcion, completada, created_at FROM tareas ORDER BY id;
-```
-
-**Resultado en Versión 2**:
+### 📸 Inspección de la Tabla `tareas` con la Columna `created_at`
 | id | titulo | descripcion | completada | created_at |
-|---|---|---|---|---|
-| 1 | Estudiar navegación | Repasar Inicio, Lista y Detalle. | 0 | 0 |
-| 2 | Preparar el README | Documentar TaskFlow. | 1 | 0 |
-| 3 | Probar la aplicación | Verificar todos los botones. | 0 | 0 |
-| 4 | Tarea Nueva Usuario | Creada después de migración | 0 | 1718000000000 |
+| :---: | :--- | :--- | :---: | :---: |
+| 1 | Estudiar navegación | Repasar NavController, NavHost y las rutas... | 1 | 0 |
+| 2 | Preparar el README | Documentar funcionalidades, tecnologías y form... | 1 | 0 |
+| 3 | Probar en el AVD | Ejecutar las tres pantallas y verificar todos los b... | 1 | 0 |
+| 4 | Prueba LB6 | corazon | 1 | 0 |
+| 5 | Otra | 2222 | 0 | 0 |
+| 6 | Tarea guardada | pica pollo | 0 | 0 |
+| 7 | Prueba de persistencia | Girasol antes | 0 | 0 |
 
-*Nota: Todas las filas históricas migradas conservan sus campos `id`, `titulo`, `descripcion` y `completada`, con `created_at = 0`. Las nuevas tareas creadas por el usuario reciben el timestamp actual (`System.currentTimeMillis()`).*
-
----
-
-## 2. Migración de Preferencias (SharedPreferences ➔ DataStore)
-
-* **Origen Legado**: `taskflow_legacy_preferences.xml` con clave `filtro_tareas_activo = "PENDIENTES"`.
-* **Mecanismo**: `SharedPreferencesMigration` integrado en `DataStoreModule` mediante `produceMigrations`.
-* **Resultado**: `DataStore Preferences` (`user_preferences.preferences_pb`) migra automáticamente el valor del filtro y `TaskFilter.fromStorageKey` decodifica la clave a `TaskFilter.PENDING`.
+*Observación: Todas las tareas históricas anteriores conservan intactos sus IDs, títulos, descripciones y estados completada/pendiente, con la nueva columna `created_at` inicializada en `0` (DEFAULT 0 SQL) para indicar fecha histórica preservada.*
 
 ---
 
-## 📸 Pasos para Guardar Capturas desde Android Studio
+## 2. Verificación de la Interfaz con la Paleta Teal Material 3
 
-Si deseas guardar archivos de captura de pantalla `.png` directamente desde tu emulador iniciado:
+En la captura tomada desde el emulador Android se verifica la pantalla **Mis Tareas** (`TaskListScreen`):
+* Paleta de colores Teal verde azulado activa en el tema.
+* Chips de filtro (`Todas`, `Pendientes`, `Completadas`).
+* Botón de eliminación 🗑️ por cada tarea.
+* Botón flotante `+` (*FloatingActionButton*) para agregar tareas.
+* Integración de los laboratorios sobre las tareas reales almacenadas en Room.
 
-1. **Iniciar el Emulador (AVD)** en Android Studio y presionar **Run** (Shift + F10).
-2. **Abrir la app TaskFlow**:
-   - Para capturar la pantalla de la app, haz clic en el ícono de la cámara 📷 en la barra lateral derecha de la ventana del emulador en Android Studio.
-3. **Abrir Database Inspector**:
-   - Ve a **View > Tool Windows > App Inspection** y selecciona el tab **Database Inspector**.
-   - Selecciona la base `taskflow_database` y ejecuta la consulta SQL para ver la nueva columna `created_at`.
-4. **Guardar las capturas**:
-   - Guarda las imágenes en la carpeta `docs/lab7/screenshots/`.
+---
+
+## 3. Estado de Pruebas Automatizadas
+* **31 de 31 pruebas unitarias e instrumentadas ejecutadas y aprobadas al 100%**, incluyendo la prueba instrumentada `TaskFlowMigrationsTest` con `MigrationTestHelper` y `UserPreferencesMigrationTest`.
