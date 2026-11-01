@@ -1,5 +1,6 @@
 package com.josue.taskflow.data.repository.task
 
+import androidx.paging.PagingSource
 import com.josue.taskflow.data.local.database.dao.RemoteTaskLinkDao
 import com.josue.taskflow.data.local.database.entity.task.RemoteTaskLinkEntity
 import com.josue.taskflow.data.local.database.entity.task.TaskEntity
@@ -7,6 +8,7 @@ import com.josue.taskflow.data.local.datasource.task.TaskLocalDataSource
 import com.josue.taskflow.data.mapper.task.toDomain
 import com.josue.taskflow.data.mapper.task.toEntity
 import com.josue.taskflow.data.remote.datasource.TaskRemoteDataSource
+import com.josue.taskflow.data.remote.dto.TaskDto
 import com.josue.taskflow.domain.model.task.Task
 import com.josue.taskflow.domain.model.task.TaskOperationResult
 import com.josue.taskflow.domain.repository.task.TaskRepository
@@ -25,8 +27,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Implementación de TaskRepository que combina la base local de Room con la API REST remota Retrofit.
- * Sigue una estrategia 'Room como fuente de verdad' con importación idempotente.
+ * Implementación de TaskRepository que combina la base local de Room con Paging 3 y Retrofit.
+ * Mantiene la estrategia 'Room como fuente de verdad' con paginación interna idempotente.
  */
 @Singleton
 class DefaultTaskRepository @Inject constructor(
@@ -48,7 +50,7 @@ class DefaultTaskRepository @Inject constructor(
             .onStart {
                 repositoryScope.launch {
                     try {
-                        fetchAndSyncRemoteTasks()
+                        fetchAndSyncRemoteTasksPaged(maxPagesToFetch = 2)
                     } catch (_: Exception) {
                         // Errores de red se suprimen si ya existen datos locales
                     }
@@ -65,26 +67,55 @@ class DefaultTaskRepository @Inject constructor(
         }
     }
 
-    suspend fun fetchAndSyncRemoteTasks() {
+    suspend fun fetchAndSyncRemoteTasksPaged(maxPagesToFetch: Int = 2) {
         syncMutex.withLock {
-            val remoteDtos = remoteDataSource.fetchRemoteTasks(userId = 1)
-            for (dto in remoteDtos) {
-                val existingLink = remoteTaskLinkDao.getLink("jsonplaceholder", dto.id)
-                if (existingLink == null) {
-                    val newLocalId = localDataSource.insertTask(dto.toEntity()).toInt()
-                    if (newLocalId > 0) {
-                        remoteTaskLinkDao.insertOrUpdateLink(
-                            RemoteTaskLinkEntity(
-                                provider = "jsonplaceholder",
-                                remoteId = dto.id,
-                                localTaskId = newLocalId,
-                                isDeleted = false
-                            )
-                        )
+            val pagingSource = remoteDataSource.createPagingSource(userId = 1, pageSize = 10)
+            var currentKey: Int? = 1
+            var pageCount = 0
+
+            while (currentKey != null && pageCount < maxPagesToFetch) {
+                val params = PagingSource.LoadParams.Refresh(
+                    key = currentKey,
+                    loadSize = 10,
+                    placeholdersEnabled = false
+                )
+
+                when (val loadResult = pagingSource.load(params)) {
+                    is PagingSource.LoadResult.Page -> {
+                        val dtos = loadResult.data
+                        if (dtos.isNotEmpty()) {
+                            savePageToRoom(dtos)
+                        }
+                        currentKey = loadResult.nextKey
+                        pageCount++
                     }
+                    is PagingSource.LoadResult.Error -> {
+                        if (pageCount == 0) {
+                            throw loadResult.throwable
+                        }
+                        break
+                    }
+                    is PagingSource.LoadResult.Invalid -> break
                 }
-                // Si el enlace existe y isDeleted == true, se omite (no se resucita la tarea).
-                // Si el enlace existe y localTaskId != null, se omite (no se sobrescriben cambios locales).
+            }
+        }
+    }
+
+    private suspend fun savePageToRoom(dtos: List<TaskDto>) {
+        for (dto in dtos) {
+            val existingLink = remoteTaskLinkDao.getLink("jsonplaceholder", dto.id)
+            if (existingLink == null) {
+                val newLocalId = localDataSource.insertTask(dto.toEntity()).toInt()
+                if (newLocalId > 0) {
+                    remoteTaskLinkDao.insertOrUpdateLink(
+                        RemoteTaskLinkEntity(
+                            provider = "jsonplaceholder",
+                            remoteId = dto.id,
+                            localTaskId = newLocalId,
+                            isDeleted = false
+                        )
+                    )
+                }
             }
         }
     }

@@ -103,6 +103,12 @@ class DefaultTaskRepositoryTest {
                 TaskDto(userId = 1, id = 101, title = "Tarea Remota REST", completed = false)
             )
         }
+
+        override suspend fun getTodosPaged(userId: Int, page: Int, limit: Int): List<TaskDto> {
+            return if (page == 1) {
+                listOf(TaskDto(userId = 1, id = 101, title = "Tarea Remota REST", completed = false))
+            } else emptyList()
+        }
     }
 
     private lateinit var fakeDao: FakeTaskDao
@@ -148,14 +154,14 @@ class DefaultTaskRepositoryTest {
     }
 
     @Test
-    fun `fetchAndSyncRemoteTasks importa tareas de la API sin duplicar ids ni resucitar borradas`() = runBlocking {
-        repository.fetchAndSyncRemoteTasks()
+    fun `fetchAndSyncRemoteTasksPaged importa tareas de la API con Paging 3 sin duplicar ids`() = runBlocking {
+        repository.fetchAndSyncRemoteTasksPaged(maxPagesToFetch = 2)
 
         val tasks = repository.getTasksStream().first()
         assertTrue(tasks.any { it.title == "Tarea Remota REST" })
 
         val countBefore = tasks.size
-        repository.fetchAndSyncRemoteTasks()
+        repository.fetchAndSyncRemoteTasksPaged(maxPagesToFetch = 2)
         val countAfter = repository.getTasksStream().first().size
         assertEquals(countBefore, countAfter)
     }

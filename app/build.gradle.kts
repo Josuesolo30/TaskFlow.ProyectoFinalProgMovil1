@@ -92,6 +92,11 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging.interceptor)
 
+    // Paging 3
+    implementation(libs.androidx.paging.runtime)
+    implementation(libs.androidx.paging.common)
+    testImplementation(libs.androidx.paging.testing)
+
     // Room Database
     val roomVersion = "2.6.1"
     implementation("androidx.room:room-runtime:$roomVersion")

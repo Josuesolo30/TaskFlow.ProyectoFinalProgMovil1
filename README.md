@@ -1,6 +1,6 @@
 # TaskFlow - Gestor de Tareas Personales
 
-Aplicación Android para la gestión integral de tareas personales, desarrollada con **Kotlin**, **Jetpack Compose**, **Retrofit** (consumo REST de JSONPlaceholder), **Room Database** (con migraciones manuales v1 ➔ v2 ➔ v3), **DataStore Preferences** (con migración desde SharedPreferences), **Hilt** y **Material 3 (Teal Theme)**. 
+Aplicación Android para la gestión integral de tareas personales, desarrollada con **Kotlin**, **Jetpack Compose**, **Paging 3** (paginación remota con PagingSource), **Retrofit** (consumo REST de JSONPlaceholder), **Room Database** (con migraciones manuales v1 ➔ v2 ➔ v3), **DataStore Preferences** (con migración desde SharedPreferences), **Hilt** y **Material 3 (Teal Theme)**. 
 
 ---
 
@@ -30,12 +30,13 @@ app/src/main/java/com/josue/taskflow/
 │   ├── remote/
 │   │   ├── api/TaskApiService.kt    # Interfaz Retrofit para GET /todos?userId=1
 │   │   ├── datasource/TaskRemoteDataSource.kt # Fuente remota Retrofit
-│   │   └── dto/TaskDto.kt           # DTO Kotlinx Serialization
+│   │   ├── dto/TaskDto.kt           # DTO Kotlinx Serialization
+│   │   └── paging/TaskPagingSource.kt # PagingSource de Paging 3
 │   ├── mapper/task/
 │   │   ├── TaskMapper.kt            # Conversión toDomain() / toEntity()
 │   │   └── TaskRemoteMapper.kt      # Conversión TaskDto ➔ Task / TaskEntity
 │   └── repository/
-│       ├── task/DefaultTaskRepository.kt # Repositorio de tareas con sync remota
+│       ├── task/DefaultTaskRepository.kt # Repositorio Offline-First con Paging 3
 │       └── settings/DefaultSettingsRepository.kt # Repositorio de preferencias
 ├── di/                              # Módulos de Inyección de Dependencias (Hilt)
 │   ├── DatabaseModule.kt            # Proveedor de Room Database y DAOs
@@ -71,7 +72,7 @@ app/src/main/java/com/josue/taskflow/
 
 ---
 
-## 📊 Matriz de Cumplimiento y Estado de Prácticas (Laboratorios 0 a 8)
+## 📊 Matriz de Cumplimiento y Estado de Prácticas (Laboratorios 0 a 9)
 
 | Práctica | Archivo que la implementa | Estado | Evidencia o verificación realizada |
 | :--- | :--- | :--- | :--- |
@@ -79,11 +80,12 @@ app/src/main/java/com/josue/taskflow/
 | **Genéricos y Funciones de Orden Superior (Lab 1+2)** | `core/collection/ProcessableContainer.kt`, `domain/usecase/task/TaskUseCase.kt` | **Completo** | 12 pruebas unitarias de `ProcessableContainer` pasadas al 100%. |
 | **Corrutinas y Callbacks a Suspend (Lab 3)** | `core/audio/TaskAudioPlayer.kt`, `domain/usecase/task/TaskUseCase.kt` | **Completo** | `suspendCancellableCoroutine` sobre Android TextToSpeech y `async`/`await` concurrentes probados. |
 | **Flow Reactivo y Operadores (Lab 4)** | `ui/screen/tasklist/viewmodel/TaskListViewModel.kt` | **Completo** | Combinación de Room y DataStore con `combine`, `map`, `retry` y `catch`. Pruebas al 100%. |
-| **MVVM y Clean Architecture (Lab 5)** | Capas `ui/`, `domain/`, `data/`, `di/`, `core/` | **Completo** | Inversión de dependencias estricta. El dominio y UI no dependen de Retrofit ni Room. |
+| **MVVM y Clean Architecture (Lab 5)** | Capas `ui/`, `domain/`, `data/`, `di/`, `core/` | **Completo** | Inversión de dependencias estricta. El dominio y UI no dependen de Paging 3, Retrofit ni Room. |
 | **Persistencia Room Database (Lab 6)** | `data/local/database/TaskFlowDatabase.kt`, `data/local/database/dao/TaskDao.kt` | **Completo** | CRUD completo (Crear, Leer, Editar, Eliminar) en Room SQLite verificado con filas afectadas. |
 | **Migración Manual de Room (Lab 7)** | `data/local/database/migration/TaskFlowMigrations.kt` | **Completo** | `MIGRATION_1_2` y `MIGRATION_2_3`. Esquemas `1.json`, `2.json` y `3.json` auténticos. |
 | **Migración SharedPreferences a DataStore (Lab 7)** | `di/DataStoreModule.kt` | **Completo** | `SharedPreferencesMigration` migra `filtro_tareas_activo` de `taskflow_legacy_preferences` a `user_preferences`. |
 | **Consumo de API REST con Retrofit (Lab 8)** | `data/remote/api/TaskApiService.kt`, `data/repository/task/DefaultTaskRepository.kt` | **Completo** | Consumo de `GET /todos?userId=1` de JSONPlaceholder con importación idempotente en Room. |
+| **Paginación Paging 3 y Offline-First (Lab 9)** | `data/remote/paging/TaskPagingSource.kt`, `data/repository/task/DefaultTaskRepository.kt` | **Completo** | `TaskPagingSource` con `PagingSource` de Paging 3. Room es la fuente única de verdad offline-first. |
 
 ---
 
@@ -98,6 +100,7 @@ app/src/main/java/com/josue/taskflow/
 ## 🛠️ Tecnologías Utilizadas
 * **Kotlin 2.x** (Corrutinas, Flow, Genéricos, Varianza, Reified, Scope Functions)
 * **Hilt 2.51.1** (Inyección de dependencias)
+* **Paging 3 (3.3.2)** (`PagingSource`, `LoadParams`, `LoadResult`)
 * **Retrofit 2.11.0** & **kotlinx.serialization 1.7.3** (Consumo de API REST JSONPlaceholder)
 * **OkHttp 4.12.0** & **HttpLoggingInterceptor**
 * **Room Database 2.6.1** (con `MIGRATION_1_2`, `MIGRATION_2_3` y `room-testing`) & **KSP**
@@ -105,7 +108,7 @@ app/src/main/java/com/josue/taskflow/
 * **Clean Architecture & MVVM** (`Route` / `Screen` / `ViewModel` / `UiState`)
 * **Jetpack Compose & Material 3 (Teal Theme)**
 * **Navigation Compose 2.9.8**
-* **JUnit 4** & **MockWebServer** (36 pruebas unitarias e instrumentadas automatizadas)
+* **JUnit 4** & **MockWebServer** (39 pruebas unitarias e instrumentadas automatizadas)
 
 ---
 
@@ -126,6 +129,8 @@ app/src/main/java/com/josue/taskflow/
 ---
 
 ## 📄 Documentación Adicional
+* [Documentación de Implementación de Lab 9 (Paging 3 & Offline-First)](docs/LAB9_IMPLEMENTATION.md)
+* [Evidencia del Lab 9](docs/LAB9_EVIDENCE.md)
 * [Documentación de Implementación de Lab 8](docs/LAB8_IMPLEMENTATION.md)
 * [Evidencia de Integración de API REST de Lab 8](docs/LAB8_EVIDENCE.md)
 * [Documentación de Implementación de Lab 7](docs/LAB7_IMPLEMENTATION.md)
