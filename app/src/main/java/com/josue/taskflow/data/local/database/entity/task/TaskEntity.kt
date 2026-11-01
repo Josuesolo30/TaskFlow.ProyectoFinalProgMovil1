@@ -6,7 +6,7 @@ import androidx.room.PrimaryKey
 
 /**
  * Entidad de Room para la tabla 'tareas'.
- * Conserva los nombres de tabla y columnas SQL existentes para mantener compatibilidad total de datos.
+ * Versión 2: añade la columna 'created_at' con valor predeterminado 0 para datos históricos.
  */
 @Entity(tableName = "tareas")
 data class TaskEntity(
@@ -21,5 +21,8 @@ data class TaskEntity(
     val description: String,
 
     @ColumnInfo(name = "completada")
-    val isCompleted: Boolean = false
+    val isCompleted: Boolean = false,
+
+    @ColumnInfo(name = "created_at", defaultValue = "0")
+    val createdAt: Long = 0L
 )

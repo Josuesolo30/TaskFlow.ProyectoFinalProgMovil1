@@ -5,13 +5,15 @@ import com.josue.taskflow.domain.model.task.Task
 
 /**
  * Mappers para convertir entre TaskEntity (Capa de Datos) y Task (Capa de Dominio).
+ * Preservan el campo 'createdAt' en ambas direcciones.
  */
 fun TaskEntity.toDomain(): Task {
     return Task(
         id = id,
         title = title,
         description = description,
-        isCompleted = isCompleted
+        isCompleted = isCompleted,
+        createdAt = createdAt
     )
 }
 
@@ -20,6 +22,7 @@ fun Task.toEntity(): TaskEntity {
         id = id,
         title = title,
         description = description,
-        isCompleted = isCompleted
+        isCompleted = isCompleted,
+        createdAt = createdAt
     )
 }

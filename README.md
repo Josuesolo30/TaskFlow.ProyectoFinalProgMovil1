@@ -1,6 +1,6 @@
 # TaskFlow - Gestor de Tareas Personales
 
-Aplicación Android para la gestión integral de tareas personales, desarrollada con **Kotlin**, **Jetpack Compose**, **Room Database**, **DataStore Preferences**, **Hilt** y **Material 3 (Teal Theme)**. 
+Aplicación Android para la gestión integral de tareas personales, desarrollada con **Kotlin**, **Jetpack Compose**, **Room Database** (con migración manual v1 ➔ v2), **DataStore Preferences** (con migración desde SharedPreferences), **Hilt** y **Material 3 (Teal Theme)**. 
 
 ---
 
@@ -19,8 +19,9 @@ app/src/main/java/com/josue/taskflow/
 │   ├── local/
 │   │   ├── database/
 │   │   │   ├── dao/TaskDao.kt       # Consultas SQL Room
-│   │   │   ├── entity/task/TaskEntity.kt # Entidad de la tabla 'tareas'
-│   │   │   └── TaskFlowDatabase.kt # Base de datos SQLite Room (v1)
+│   │   │   ├── entity/task/TaskEntity.kt # Entidad 'tareas' con created_at (v2)
+│   │   │   ├── migration/TaskFlowMigrations.kt # MIGRATION_1_2 manual
+│   │   │   └── TaskFlowDatabase.kt # SQLite Room Database (v2, exportSchema = true)
 │   │   └── datasource/
 │   │       ├── task/TaskLocalDataSource.kt # Fuente local Room
 │   │       └── settings/SettingsLocalDataSource.kt # Fuente local DataStore
@@ -30,12 +31,13 @@ app/src/main/java/com/josue/taskflow/
 │       └── settings/DefaultSettingsRepository.kt # Repositorio de preferencias
 ├── di/                              # Módulos de Inyección de Dependencias (Hilt)
 │   ├── DatabaseModule.kt            # Proveedor de Room Database y TaskDao
-│   ├── DataStoreModule.kt           # Proveedor de DataStore Preferences
+│   ├── DataStoreModule.kt           # Proveedor de DataStore Preferences con SharedPreferencesMigration
 │   └── RepositoryModule.kt          # Binding de repositorios
 ├── domain/                          # Capa de Dominio (Modelos puros y Casos de Uso)
 │   ├── model/
-│   │   ├── task/Task.kt             # Modelo puro de tarea
+│   │   ├── task/Task.kt             # Modelo puro de tarea con createdAt
 │   │   ├── task/TaskFilter.kt       # Enum de filtros con decodificación legado/nuevo
+│   │   ├── task/TaskOperationResult.kt # Resultados de operaciones
 │   │   └── statistics/TaskStatistics.kt # Modelo de estadísticas
 │   ├── repository/
 │   │   ├── task/TaskRepository.kt   # Contrato de datos de tareas
@@ -49,21 +51,9 @@ app/src/main/java/com/josue/taskflow/
     │   ├── AppNavHost.kt            # NavHost principal
     │   └── AppDestination.kt        # Rutas y argumentos de navegación
     ├── screen/
-    │   ├── home/                    # Pantalla de Inicio (Route / Screen / ViewModel / State)
-    │   │   ├── model/HomeUiState.kt
-    │   │   ├── view/HomeRoute.kt
-    │   │   ├── view/HomeScreen.kt
-    │   │   └── viewmodel/HomeViewModel.kt
+    │   ├── home/                    # Pantalla de Inicio
     │   ├── tasklist/                # Pantalla de Lista de Tareas
-    │   │   ├── model/TaskListUiState.kt
-    │   │   ├── view/TaskListRoute.kt
-    │   │   ├── view/TaskListScreen.kt
-    │   │   └── viewmodel/TaskListViewModel.kt
     │   └── taskdetail/              # Pantalla de Detalle de Tarea
-    │       ├── model/TaskDetailUiState.kt
-    │       ├── view/TaskDetailRoute.kt
-    │       ├── view/TaskDetailScreen.kt
-    │       └── viewmodel/TaskDetailViewModel.kt
     └── theme/
         ├── ColorPalette.kt          # Paleta verde azulado Teal Material 3
         ├── TaskFlowTheme.kt         # Temas Claro y Oscuro
@@ -72,18 +62,18 @@ app/src/main/java/com/josue/taskflow/
 
 ---
 
-## 📊 Matriz de Cumplimiento y Estado de Prácticas
+## 📊 Matriz de Cumplimiento y Estado de Prácticas (Laboratorios 0 a 7)
 
 | Práctica | Archivo que la implementa | Estado | Evidencia o verificación realizada |
 | :--- | :--- | :--- | :--- |
-| **Vistas en Capa UI** | `ui/screen/`, `ui/components/`, `ui/theme/` | **Completo** | Todas las vistas, Compose y temas organizados bajo `ui/`. |
-| **Un Caso de Uso con Operaciones (`TaskUseCase`)** | `domain/usecase/task/TaskUseCase.kt` | **Completo** | Agrupa `observeTasks`, `observeTask`, `observeStatistics`, `observeFilter`, `saveFilter`, `addTask`, `toggleCompletion`, `updateDescription`, `deleteTask`. |
-| **Una Pantalla, Un ViewModel** | `HomeViewModel.kt`, `TaskListViewModel.kt`, `TaskDetailViewModel.kt` | **Completo** | Cada pantalla posee su propio ViewModel `@HiltViewModel` e inyectado con `hiltViewModel()`. |
-| **Subcarpetas por Pantalla y Capa** | `ui/screen/home/`, `ui/screen/tasklist/`, `ui/screen/taskdetail/`, `domain/model/`, `data/local/` | **Completo** | Subcarpetas `view`, `viewmodel` y `model` organizan cada pantalla; modelos de dominio y persistencia separados. |
-| **Nombres en Inglés y Normalización** | Todo el proyecto | **Completo** | Nombres de clases, métodos, variables e identificadores traducidos a inglés. Textos UI visibles conservados en español vía `strings.xml`. |
-| **Paleta Teal Material 3 Legible** | `ui/theme/ColorPalette.kt`, `ui/theme/TaskFlowTheme.kt` | **Completo** | Paleta Teal verde azulado con contraste verificado >= 4.5:1 para temas claro y oscuro. |
-| **Receptor Único de Mensajes** | `ui/message/AppMessageHost.kt` | **Completo** | `AppMessageHost` en la raíz de UI observa el canal de notificaciones sin competencia entre pantallas. |
-| **Persistencia Room + DataStore** | `data/local/database/`, `data/local/datasource/` | **Completo** | Conserva la tabla SQLite `"tareas"` y la clave DataStore `"filtro_tareas_activo"`. |
+| **Navegación e Intent Implícito (Lab 0)** | `ui/navigation/AppNavHost.kt`, `ui/screen/taskdetail/view/TaskDetailScreen.kt` | **Completo** | Probado con `NavHost`, argumentos dinámicos y chooser `ACTION_SEND` para compartir tareas. |
+| **Genéricos y Funciones de Orden Superior (Lab 1+2)** | `core/collection/ProcessableContainer.kt`, `domain/usecase/task/TaskUseCase.kt` | **Completo** | 12 pruebas unitarias de `ProcessableContainer` pasadas al 100%. |
+| **Corrutinas y Callbacks a Suspend (Lab 3)** | `core/audio/TaskAudioPlayer.kt`, `domain/usecase/task/TaskUseCase.kt` | **Completo** | `suspendCancellableCoroutine` sobre Android TextToSpeech y `async`/`await` concurrentes probados. |
+| **Flow Reactivo y Operadores (Lab 4)** | `ui/screen/tasklist/viewmodel/TaskListViewModel.kt` | **Completo** | Combinación de Room y DataStore con `combine`, `map`, `retry` y `catch`. Pruebas al 100%. |
+| **MVVM y Clean Architecture (Lab 5)** | Capas `ui/`, `domain/`, `data/`, `di/`, `core/` | **Completo** | Inversión de dependencias estricta. El dominio no depende de Android ni Room. |
+| **Persistencia Room Database (Lab 6)** | `data/local/database/TaskFlowDatabase.kt`, `data/local/database/dao/TaskDao.kt` | **Completo** | CRUD completo (Crear, Leer, Editar, Eliminar) en Room SQLite verificado con filas afectadas. |
+| **Migración Manual de Room (Lab 7)** | `data/local/database/migration/TaskFlowMigrations.kt` | **Completo** | `MIGRATION_1_2` añadiendo columna `created_at INTEGER NOT NULL DEFAULT 0`. Esquemas `1.json` y `2.json` auténticos. |
+| **Migración SharedPreferences a DataStore (Lab 7)** | `di/DataStoreModule.kt` | **Completo** | `SharedPreferencesMigration` migra `filtro_tareas_activo` de `taskflow_legacy_preferences` a `user_preferences`. |
 
 ---
 
@@ -98,12 +88,12 @@ app/src/main/java/com/josue/taskflow/
 ## 🛠️ Tecnologías Utilizadas
 * **Kotlin 2.x** (Corrutinas, Flow, Genéricos, Varianza, Reified, Scope Functions)
 * **Hilt 2.51.1** (Inyección de dependencias)
-* **Room Database 2.6.1** & **KSP**
-* **DataStore Preferences 1.1.1**
+* **Room Database 2.6.1** (con `MIGRATION_1_2` y `room-testing`) & **KSP**
+* **DataStore Preferences 1.1.1** (con `SharedPreferencesMigration`)
 * **Clean Architecture & MVVM** (`Route` / `Screen` / `ViewModel` / `UiState`)
 * **Jetpack Compose & Material 3 (Teal Theme)**
 * **Navigation Compose 2.9.8**
-* **JUnit 4** (20 pruebas unitarias automatizadas)
+* **JUnit 4** (31 pruebas unitarias e instrumentadas automatizadas)
 
 ---
 
@@ -123,8 +113,11 @@ app/src/main/java/com/josue/taskflow/
 
 ---
 
-## 📄 Documentación Adicional de Refactorización
-Consulta el reporte detallado de refactorización en [`docs/REFACTOR_REPORT.md`](docs/REFACTOR_REPORT.md) y los requerimientos del proyecto en [`REQUIREMENTS.md`](REQUIREMENTS.md).
+## 📄 Documentación del Lab 7 y Refactorización
+* [Documentación de Implementación de Lab 7](docs/LAB7_IMPLEMENTATION.md)
+* [Evidencia de Migración y Datos de Lab 7](docs/LAB7_EVIDENCE.md)
+* [Reporte Completo de Refactorización y Pruebas](docs/REFACTOR_REPORT.md)
+* [Requerimientos de la Aplicación](REQUIREMENTS.md)
 
 ---
 

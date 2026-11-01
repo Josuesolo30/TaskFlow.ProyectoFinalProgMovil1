@@ -16,7 +16,7 @@ import javax.inject.Singleton
 
 /**
  * Implementación principal de TaskRepository utilizando Room mediante TaskLocalDataSource.
- * Verifica el número de filas afectadas y emite notificaciones únicamente tras un éxito confirmado.
+ * Asigna System.currentTimeMillis() a createdAt únicamente al crear nuevas tareas de usuario.
  */
 @Singleton
 class DefaultTaskRepository @Inject constructor(
@@ -51,7 +51,8 @@ class DefaultTaskRepository @Inject constructor(
             val rowId = localDataSource.insertTask(
                 TaskEntity(
                     title = cleanTitle,
-                    description = description.trim()
+                    description = description.trim(),
+                    createdAt = System.currentTimeMillis()
                 )
             )
             if (rowId > 0) {
