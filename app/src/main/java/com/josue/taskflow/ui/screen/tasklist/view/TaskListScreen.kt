@@ -139,7 +139,30 @@ fun TaskListScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Contador de tareas visibles derivado de la lista actual en el estado
+            val visibleCountText = when (uiState) {
+                is TaskListUiState.Content -> {
+                    val count = uiState.tasks.size
+                    when (count) {
+                        0 -> stringResource(R.string.visible_tasks_count_zero)
+                        1 -> stringResource(R.string.visible_tasks_count_one)
+                        else -> stringResource(R.string.visible_tasks_count, count)
+                    }
+                }
+                is TaskListUiState.Empty -> stringResource(R.string.visible_tasks_count_zero)
+                else -> null
+            }
+
+            visibleCountText?.let { countText ->
+                Text(
+                    text = countText,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
 
             when (uiState) {
                 is TaskListUiState.Loading -> {

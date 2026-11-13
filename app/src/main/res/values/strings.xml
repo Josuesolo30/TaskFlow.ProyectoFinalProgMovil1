@@ -51,4 +51,7 @@
     <string name="msg_task_pending">Tarea marcada como pendiente</string>
     <string name="msg_description_saved">Descripción guardada</string>
     <string name="msg_task_deleted">Tarea eliminada: %1$s</string>
+    <string name="visible_tasks_count">Mostrando %1$d tareas</string>
+    <string name="visible_tasks_count_one">Mostrando 1 tarea</string>
+    <string name="visible_tasks_count_zero">0 tareas visibles</string>
 </resources>

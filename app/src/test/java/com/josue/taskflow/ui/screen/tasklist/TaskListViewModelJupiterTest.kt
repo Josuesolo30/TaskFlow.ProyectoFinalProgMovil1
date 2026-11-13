@@ -1,5 +1,6 @@
 package com.josue.taskflow.ui.screen.tasklist
 
+import app.cash.turbine.test
 import com.josue.taskflow.domain.model.task.Task
 import com.josue.taskflow.domain.model.task.TaskFilter
 import com.josue.taskflow.domain.model.task.TaskOperationResult
@@ -35,7 +36,7 @@ import java.io.IOException
 
 /**
  * Suite de pruebas unitarias para TaskListViewModel utilizando JUnit 5 Jupiter, MockK,
- * StandardTestDispatcher y runTest.
+ * StandardTestDispatcher, runTest y Turbine.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class TaskListViewModelJupiterTest {
@@ -240,5 +241,41 @@ class TaskListViewModelJupiterTest {
         coVerify { taskRepository.addTask("Tarea Solo Titulo", "") }
 
         backgroundJob.cancel()
+    }
+
+    @Test
+    fun `10 Ver solo tareas completadas usando Turbine prueba las emisiones reactivas`() = runTest(testDispatcher) {
+        val taskPending = Task(id = 1, title = "Tarea Pendiente", description = "D1", isCompleted = false)
+        val taskCompleted = Task(id = 2, title = "Tarea Completada", description = "D2", isCompleted = true)
+
+        tasksFlow.value = listOf(taskPending, taskCompleted)
+        filterFlow.value = TaskFilter.ALL
+
+        viewModel.uiState.test {
+            val loadingItem = awaitItem()
+            assertTrue(loadingItem is TaskListUiState.Loading)
+
+            val initialContent = awaitItem() as TaskListUiState.Content
+            assertEquals(2, initialContent.tasks.size)
+            assertEquals(TaskFilter.ALL, initialContent.activeFilter)
+
+            coEvery { settingsRepository.saveFilter(TaskFilter.COMPLETED) } answers {
+                filterFlow.value = TaskFilter.COMPLETED
+            }
+
+            viewModel.selectFilter(TaskFilter.COMPLETED)
+
+            val filteredContent = awaitItem() as TaskListUiState.Content
+            assertEquals(1, filteredContent.tasks.size)
+            assertEquals(2, filteredContent.tasks.first().id)
+            assertEquals(TaskFilter.COMPLETED, filteredContent.activeFilter)
+
+            tasksFlow.value = listOf(taskPending)
+
+            val emptyState = awaitItem() as TaskListUiState.Empty
+            assertEquals(TaskFilter.COMPLETED, emptyState.activeFilter)
+
+            cancelAndIgnoreRemainingEvents()
+        }
     }
 }

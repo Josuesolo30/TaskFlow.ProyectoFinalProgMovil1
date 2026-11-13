@@ -1,6 +1,6 @@
 # TaskFlow - Gestor de Tareas Personales
 
-Aplicación Android para la gestión integral de tareas personales, desarrollada con **Kotlin**, **Jetpack Compose**, **Paging 3** (paginación remota con PagingSource), **Retrofit** (consumo REST de JSONPlaceholder), **Room Database** (con migraciones manuales v1 ➔ v2 ➔ v3), **DataStore Preferences** (con migración desde SharedPreferences), **Hilt**, **JUnit 5 (Jupiter)**, **MockK** y **Material 3 (Teal Theme)**. 
+Aplicación Android para la gestión integral de tareas personales, desarrollada con **Kotlin**, **Jetpack Compose**, **Paging 3** (paginación remota con PagingSource), **Retrofit** (consumo REST de JSONPlaceholder), **Room Database** (con migraciones manuales v1 ➔ v2 ➔ v3), **DataStore Preferences** (con migración desde SharedPreferences), **Hilt**, **Turbine**, **ComposeTestRule**, **JUnit 5 (Jupiter)**, **MockK** y **Material 3 (Teal Theme)**. 
 
 ---
 
@@ -62,7 +62,7 @@ app/src/main/java/com/josue/taskflow/
     │   └── AppDestination.kt        # Rutas y argumentos de navegación
     ├── screen/
     │   ├── home/                    # Pantalla de Inicio
-    │   ├── tasklist/                # Pantalla de Lista de Tareas
+    │   ├── tasklist/                # Pantalla de Lista de Tareas con Contador de Tareas Visibles
     │   └── taskdetail/              # Pantalla de Detalle de Tarea
     └── theme/
         ├── ColorPalette.kt          # Paleta verde azulado Teal Material 3
@@ -72,7 +72,7 @@ app/src/main/java/com/josue/taskflow/
 
 ---
 
-## 📊 Matriz de Cumplimiento y Estado de Prácticas (Laboratorios 0 a 10)
+## 📊 Matriz de Cumplimiento y Estado de Prácticas (Laboratorios 0 a 11)
 
 | Práctica | Archivo que la implementa | Estado | Evidencia o verificación realizada |
 | :--- | :--- | :--- | :--- |
@@ -87,6 +87,7 @@ app/src/main/java/com/josue/taskflow/
 | **Consumo de API REST con Retrofit (Lab 8)** | `data/remote/api/TaskApiService.kt`, `data/repository/task/DefaultTaskRepository.kt` | **Completo** | Consumo de `GET /todos?userId=1` de JSONPlaceholder con importación idempotente en Room. |
 | **Paginación Paging 3 y Offline-First (Lab 9)** | `data/remote/paging/TaskPagingSource.kt`, `data/repository/task/DefaultTaskRepository.kt` | **Completo** | `TaskPagingSource` con `PagingSource` de Paging 3. Room es la fuente única de verdad offline-first. |
 | **Pruebas Unitarias JUnit 5, MockK y Cobertura JaCoCo (Lab 10)** | `TaskListViewModelJupiterTest.kt` | **Completo** | Suite JUnit 5 + MockK + `runTest`. **100% de cobertura de líneas y métodos en `TaskListViewModel.kt`** vía JaCoCo. |
+| **Pruebas con Turbine, ComposeTestRule y Avance Integrador (Lab 11)** | `TaskListViewModelJupiterTest.kt`, `TaskListScreenTest.kt`, `TaskListScreen.kt` | **Completo** | Emisiones probadas con Turbine, UI del diálogo con `createComposeRule()` y contador de tareas visibles. Rama `feature/lab11-taskflow`. |
 
 ---
 
@@ -101,6 +102,7 @@ app/src/main/java/com/josue/taskflow/
 ## 🛠️ Tecnologías Utilizadas
 * **Kotlin 2.x** (Corrutinas, Flow, Genéricos, Varianza, Reified, Scope Functions)
 * **Hilt 2.51.1** (Inyección de dependencias)
+* **Turbine (1.1.0)** & **ComposeTestRule (ui-test-junit4)** (Pruebas reactivas y de UI)
 * **JUnit 5 Jupiter (5.10.2)**, **JUnit Vintage Engine** & **MockK (1.13.10)** (Pruebas unitarias)
 * **JaCoCo 0.8.11** (Reporte de cobertura de código HTML/XML)
 * **Paging 3 (3.3.2)** (`PagingSource`, `LoadParams`, `LoadResult`)
@@ -114,24 +116,32 @@ app/src/main/java/com/josue/taskflow/
 
 ---
 
-## 🚀 Cómo Ejecutar el Proyecto y Generar Cobertura JaCoCo
+## 🚀 Cómo Ejecutar el Proyecto
 
 1. Clonar el repositorio:
    ```bash
    git clone https://github.com/Josuesolo30/TaskFlow.ProyectoFinalProgMovil1.git
    ```
-2. Abrir en **Android Studio**.
-3. Sincronizar Gradle.
-4. Ejecutar todas las pruebas unitarias (JUnit 4 y JUnit 5 Jupiter) y generar el reporte JaCoCo:
-   ```powershell
-   .\gradlew.bat testDebugUnitTest jacocoTestReport
+2. Cambiar a la rama de entrega:
+   ```bash
+   git checkout feature/lab11-taskflow
    ```
-5. Ver el reporte de cobertura HTML en el navegador:
-   `app/build/reports/jacoco/jacocoTestReport/html/com.josue.taskflow.ui.screen.tasklist.viewmodel/TaskListViewModel.html`
+3. Abrir en **Android Studio**.
+4. Sincronizar Gradle.
+5. Ejecutar todas las pruebas unitarias (JUnit 4 y JUnit 5 Jupiter con Turbine):
+   ```powershell
+   .\gradlew.bat :app:testDebugUnitTest
+   ```
+6. Ejecutar las pruebas instrumentadas UI en emulador:
+   ```powershell
+   .\gradlew.bat :app:connectedDebugAndroidTest
+   ```
 
 ---
 
 ## 📄 Documentación Adicional
+* [Reporte del Lab 11 (Turbine, ComposeTestRule & Avance Integrador)](docs/lab11/README.md)
+* [Documentación de Implementación de Lab 11](docs/LAB11_IMPLEMENTATION.md)
 * [Reporte de Cobertura JaCoCo del Lab 10](docs/lab10/COVERAGE_REPORT.md)
 * [Documentación de Implementación de Lab 10](docs/LAB10_IMPLEMENTATION.md)
 * [Documentación de Implementación de Lab 9](docs/LAB9_IMPLEMENTATION.md)

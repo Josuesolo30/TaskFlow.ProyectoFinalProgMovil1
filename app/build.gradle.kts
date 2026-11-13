@@ -149,6 +149,7 @@ dependencies {
     testImplementation(libs.junit.vintage.engine)
     testRuntimeOnly(libs.junit.platform.launcher)
     testImplementation(libs.mockk)
+    testImplementation(libs.turbine)
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
     testImplementation(libs.mockwebserver)
 
