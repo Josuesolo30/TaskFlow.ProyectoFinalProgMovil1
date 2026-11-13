@@ -54,4 +54,7 @@
     <string name="visible_tasks_count">Mostrando %1$d tareas</string>
     <string name="visible_tasks_count_one">Mostrando 1 tarea</string>
     <string name="visible_tasks_count_zero">0 tareas visibles</string>
+    <string name="sync_loading">Sincronizando tareas remotas...</string>
+    <string name="sync_error_prefix">Sincronización remota incompleta: %1$s</string>
+    <string name="retry_sync_button">Reintentar</string>
 </resources>

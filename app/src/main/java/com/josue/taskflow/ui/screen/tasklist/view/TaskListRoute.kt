@@ -17,11 +17,14 @@ fun TaskListRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val activeFilter by viewModel.activeFilter.collectAsStateWithLifecycle()
+    val syncStatus by viewModel.syncStatus.collectAsStateWithLifecycle()
 
     TaskListScreen(
         uiState = uiState,
         activeFilter = activeFilter,
+        syncStatus = syncStatus,
         onSelectFilter = viewModel::selectFilter,
+        onRetrySync = viewModel::retrySync,
         onAddTask = viewModel::addTask,
         onToggleCompletion = viewModel::toggleCompletion,
         onDeleteTask = viewModel::deleteTask,

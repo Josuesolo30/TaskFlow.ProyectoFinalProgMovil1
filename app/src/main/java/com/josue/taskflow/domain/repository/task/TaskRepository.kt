@@ -1,5 +1,6 @@
 package com.josue.taskflow.domain.repository.task
 
+import com.josue.taskflow.domain.model.sync.SyncStatus
 import com.josue.taskflow.domain.model.task.Task
 import com.josue.taskflow.domain.model.task.TaskOperationResult
 import kotlinx.coroutines.flow.Flow
@@ -13,6 +14,10 @@ interface TaskRepository {
     fun getTaskStream(taskId: Int): Flow<Task?>
 
     fun getNotificationsStream(): Flow<String>
+
+    fun observeSyncStatus(): Flow<SyncStatus>
+
+    suspend fun syncRemoteTasks()
 
     suspend fun addTask(title: String, description: String = ""): TaskOperationResult
 

@@ -9,6 +9,7 @@ import com.josue.taskflow.data.mapper.task.toDomain
 import com.josue.taskflow.data.mapper.task.toEntity
 import com.josue.taskflow.data.remote.datasource.TaskRemoteDataSource
 import com.josue.taskflow.data.remote.dto.TaskDto
+import com.josue.taskflow.domain.model.sync.SyncStatus
 import com.josue.taskflow.domain.model.task.Task
 import com.josue.taskflow.domain.model.task.TaskOperationResult
 import com.josue.taskflow.domain.repository.task.TaskRepository
@@ -17,6 +18,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -28,7 +31,7 @@ import javax.inject.Singleton
 
 /**
  * Implementación de TaskRepository que combina la base local de Room con Paging 3 y Retrofit.
- * Mantiene la estrategia 'Room como fuente de verdad' con paginación interna idempotente.
+ * Expone 'syncStatus' para informar fallos de red en la UI sin bloquear el acceso local.
  */
 @Singleton
 class DefaultTaskRepository @Inject constructor(
@@ -41,8 +44,14 @@ class DefaultTaskRepository @Inject constructor(
     private val syncMutex = Mutex()
     private val repositoryScope = CoroutineScope(Dispatchers.IO)
 
+    private val syncStatusState = MutableStateFlow<SyncStatus>(SyncStatus.Idle)
+
     override fun getNotificationsStream(): Flow<String> {
         return notificationChannel.receiveAsFlow()
+    }
+
+    override fun observeSyncStatus(): Flow<SyncStatus> {
+        return syncStatusState.asStateFlow()
     }
 
     override fun getTasksStream(): Flow<List<Task>> {
@@ -50,9 +59,9 @@ class DefaultTaskRepository @Inject constructor(
             .onStart {
                 repositoryScope.launch {
                     try {
-                        fetchAndSyncRemoteTasksPaged(maxPagesToFetch = 2)
+                        syncRemoteTasks()
                     } catch (_: Exception) {
-                        // Errores de red se suprimen si ya existen datos locales
+                        // Error de sincronización registrado en syncStatusState
                     }
                 }
             }
@@ -67,36 +76,49 @@ class DefaultTaskRepository @Inject constructor(
         }
     }
 
-    suspend fun fetchAndSyncRemoteTasksPaged(maxPagesToFetch: Int = 2) {
+    override suspend fun syncRemoteTasks() {
+        if (syncMutex.isLocked) return
+
         syncMutex.withLock {
-            val pagingSource = remoteDataSource.createPagingSource(userId = 1, pageSize = 10)
-            var currentKey: Int? = 1
-            var pageCount = 0
+            syncStatusState.value = SyncStatus.Loading
+            try {
+                fetchAndSyncRemoteTasksPaged(maxPagesToFetch = 2)
+                syncStatusState.value = SyncStatus.Success
+            } catch (e: CancellationException) {
+                syncStatusState.value = SyncStatus.Idle
+                throw e
+            } catch (e: Exception) {
+                val errorMsg = e.message ?: "Error de conexión o sincronización remota"
+                syncStatusState.value = SyncStatus.Error(errorMsg)
+            }
+        }
+    }
 
-            while (currentKey != null && pageCount < maxPagesToFetch) {
-                val params = PagingSource.LoadParams.Refresh(
-                    key = currentKey,
-                    loadSize = 10,
-                    placeholdersEnabled = false
-                )
+    suspend fun fetchAndSyncRemoteTasksPaged(maxPagesToFetch: Int = 2) {
+        val pagingSource = remoteDataSource.createPagingSource(userId = 1, pageSize = 10)
+        var currentKey: Int? = 1
+        var pageCount = 0
 
-                when (val loadResult = pagingSource.load(params)) {
-                    is PagingSource.LoadResult.Page -> {
-                        val dtos = loadResult.data
-                        if (dtos.isNotEmpty()) {
-                            savePageToRoom(dtos)
-                        }
-                        currentKey = loadResult.nextKey
-                        pageCount++
+        while (currentKey != null && pageCount < maxPagesToFetch) {
+            val params = PagingSource.LoadParams.Refresh(
+                key = currentKey,
+                loadSize = 10,
+                placeholdersEnabled = false
+            )
+
+            when (val loadResult = pagingSource.load(params)) {
+                is PagingSource.LoadResult.Page -> {
+                    val dtos = loadResult.data
+                    if (dtos.isNotEmpty()) {
+                        savePageToRoom(dtos)
                     }
-                    is PagingSource.LoadResult.Error -> {
-                        if (pageCount == 0) {
-                            throw loadResult.throwable
-                        }
-                        break
-                    }
-                    is PagingSource.LoadResult.Invalid -> break
+                    currentKey = loadResult.nextKey
+                    pageCount++
                 }
+                is PagingSource.LoadResult.Error -> {
+                    throw loadResult.throwable
+                }
+                is PagingSource.LoadResult.Invalid -> break
             }
         }
     }

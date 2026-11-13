@@ -4,6 +4,7 @@ import com.josue.taskflow.core.collection.ProcessableContainer
 import com.josue.taskflow.core.collection.maxOrNull
 import com.josue.taskflow.core.collection.minOrNull
 import com.josue.taskflow.domain.model.statistics.TaskStatistics
+import com.josue.taskflow.domain.model.sync.SyncStatus
 import com.josue.taskflow.domain.model.task.Task
 import com.josue.taskflow.domain.model.task.TaskFilter
 import com.josue.taskflow.domain.model.task.TaskOperationResult
@@ -12,14 +13,15 @@ import com.josue.taskflow.domain.repository.task.TaskRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /**
  * Caso de Uso unificado con operaciones explícitas sobre la funcionalidad de tareas.
+ * Aplica supervisorScope para aislar fallos secundarios en el cálculo de estadísticas.
  */
 class TaskUseCase @Inject constructor(
     private val taskRepository: TaskRepository,
@@ -33,6 +35,12 @@ class TaskUseCase @Inject constructor(
     fun observeFilter(): Flow<TaskFilter> = settingsRepository.getFilterStream()
 
     fun observeNotifications(): Flow<String> = taskRepository.getNotificationsStream()
+
+    fun observeSyncStatus(): Flow<SyncStatus> = taskRepository.observeSyncStatus()
+
+    suspend fun syncRemoteTasks() {
+        taskRepository.syncRemoteTasks()
+    }
 
     suspend fun saveFilter(filter: TaskFilter): TaskOperationResult {
         return try {
@@ -78,7 +86,7 @@ class TaskUseCase @Inject constructor(
 
         val container = ProcessableContainer(tasks)
 
-        coroutineScope {
+        supervisorScope {
             val countDeferred = async {
                 val completed = container.filter { it.isCompleted }.elements.size
                 val pending = container.filter { !it.isCompleted }.elements.size
@@ -88,17 +96,36 @@ class TaskUseCase @Inject constructor(
             }
 
             val summaryDeferred = async {
-                val maxTask = container.maxOrNull()
-                val minTask = container.minOrNull()
-                val summaryText = container.fold("Resumen de tareas:\n") { acc, task ->
-                    val status = if (task.isCompleted) "[✓]" else "[ ]"
-                    "$acc- $status ${task.title}\n"
+                try {
+                    val maxTask = container.maxOrNull()
+                    val minTask = container.minOrNull()
+                    val summaryText = container.fold("Resumen de tareas:\n") { acc, task ->
+                        val status = if (task.isCompleted) "[✓]" else "[ ]"
+                        "$acc- $status ${task.title}\n"
+                    }
+                    Triple(maxTask, minTask, summaryText)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    Triple(null, null, "Resumen secundario no disponible")
                 }
-                Triple(maxTask, minTask, summaryText)
             }
 
-            val (completed, pending, percentage) = countDeferred.await()
-            val (maxTask, minTask, summaryText) = summaryDeferred.await()
+            val (completed, pending, percentage) = try {
+                countDeferred.await()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Triple(0, 0, 0)
+            }
+
+            val (maxTask, minTask, summaryText) = try {
+                summaryDeferred.await()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                Triple(null, null, "Resumen secundario no disponible")
+            }
 
             TaskStatistics(
                 totalCount = tasks.size,

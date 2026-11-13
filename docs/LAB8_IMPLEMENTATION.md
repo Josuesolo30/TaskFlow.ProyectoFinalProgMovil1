@@ -1,42 +1,32 @@
-# Reporte de Implementación del Laboratorio 8 — TaskFlow
+# Reporte de Corrección del Laboratorio 8 — TaskFlow
 
 ## 1. Archivos Creados y Modificados
 
-- `data/remote/dto/TaskDto.kt`:
-  - DTO serializable con `@Serializable` para deserializar el JSON de JSONPlaceholder.
-- `data/remote/api/TaskApiService.kt`:
-  - Interfaz Retrofit declarando `@GET("todos") suspend fun getTodos(@Query("userId") userId: Int = 1): List<TaskDto>`.
-- `data/remote/datasource/TaskRemoteDataSource.kt`:
-  - Fuente remota inyectada con `TaskApiService`.
-- `data/mapper/task/TaskRemoteMapper.kt`:
-  - Mappers `TaskDto.toDomain()` y `TaskDto.toEntity()`.
-- `data/local/database/entity/task/RemoteTaskLinkEntity.kt` y `TaskFlowDatabase.kt` (v3):
-  - Tabla de enlace `remote_task_links` para relacionar IDs remotos y locales sin colisiones ni resucitar tareas eliminadas.
-- `di/NetworkModule.kt`:
-  - Módulo Hilt que provee `Json`, `OkHttpClient`, `Retrofit` y `TaskApiService`.
+- `domain/model/sync/SyncStatus.kt`:
+  - Modelo de estado de sincronización remota (`Idle`, `Loading`, `Success`, `Error`).
+- `domain/repository/task/TaskRepository.kt` & `TaskUseCase.kt`:
+  - Expone `observeSyncStatus(): Flow<SyncStatus>` y `suspend fun syncRemoteTasks()`.
 - `data/repository/task/DefaultTaskRepository.kt`:
-  - Incorpora `fetchAndSyncRemoteTasks()` de forma asíncrona al iniciar la observación de tareas de Room, con control de concurrencia mediante `Mutex`.
-- `app/src/test/java/com/josue/taskflow/data/remote/TaskApiServiceTest.kt`:
-  - Pruebas unitarias de Retrofit con `MockWebServer`.
-- `app/src/test/java/com/josue/taskflow/data/mapper/TaskRemoteMapperTest.kt`:
-  - Pruebas unitarias del mapeo de DTOs remotos.
+  - Gestiona la sincronización remota con un único intento activo coordinado mediante `Mutex`.
+  - Actualiza `syncStatusState` con `SyncStatus.Loading`, `SyncStatus.Success` o `SyncStatus.Error`.
+  - Relanza `CancellationException` y restablece `SyncStatus.Idle`.
+- `ui/screen/tasklist/viewmodel/TaskListViewModel.kt`:
+  - Expone `val syncStatus: StateFlow<SyncStatus>` y la función `retrySync()`.
+- `ui/screen/tasklist/view/TaskListScreen.kt` & `TaskListRoute.kt`:
+  - Renderiza el banner de sincronización remota: un indicador de carga durante `SyncStatus.Loading` o un aviso de error con el botón **"Reintentar"** durante `SyncStatus.Error`.
+  - Mantiene las tareas locales de Room totalmente visibles y editables en modo sin conexión.
 
 ---
 
 ## 2. Explicación para Presentar al Profesor
 
-> *"Profesor, en el Laboratorio 8 integramos el consumo de una API REST pública con Retrofit manteniendo Room como la fuente única de verdad:*
+> *"Profesor, en el Laboratorio 8 corregimos el manejo de red para asegurar una experiencia Offline-First con aviso de sincronización:*
 > 
-> 1. ***Consumo Remoto e Inyección***:
->    - *Configuramos Retrofit con `converter-kotlinx-serialization` e inyectamos `TaskApiService` mediante Hilt en `NetworkModule`.*
->    - *Consumimos el endpoint real `GET https://jsonplaceholder.typicode.com/todos?userId=1`.*
-> 2. ***Aislamiento Estricto de Capas***:
->    - *Las capas `domain/` y `ui/` no contienen ninguna dependencia de Retrofit, OkHttp ni DTOs.*
->    - *Los ViewModels siguen recibiendo exclusivamente `TaskUseCase`.*
-> 3. ***Importación Idempotente y Preservación de Datos***:
->    - *Creamos la tabla `remote_task_links` en Room (versión 3) para enlazar los IDs remotos con IDs locales autogenerados.*
->    - *Evitamos duplicar tareas importadas o resucitar aquellas que el usuario eliminó localmente.*
->    - *Si la red falla pero existen datos locales en Room, la app muestra los datos locales sin interrumpir la experiencia de usuario.*
-> 4. ***Pruebas y Verificación***:
->    - *Implementamos pruebas unitarias con `MockWebServer` para simular respuestas 200, 500 y JSONs de la API.*
->    - *36 pruebas pasadas al 100% y la aplicación compila limpiamente."*
+> 1. ***Estado de Sincronización Separado (`SyncStatus`)***:
+>    - *El repositorio expone un `Flow<SyncStatus>` (`Idle`, `Loading`, `Success`, `Error`).*
+>    - *Cualquier fallo de red se informa de forma aislada sin bloquear la lista local de Room.*
+> 2. ***Sincronización Única e Idempotente (`Mutex`)***:
+>    - *El repositorio utiliza `Mutex` para garantizar una sola petición activa.*
+> 3. ***Banner de Reintento en UI (`TaskListScreen`)***:
+>    - *Si la conexión falla, se muestra un banner con el botón 'Reintentar'.*
+>    - *Las tareas guardadas en Room siguen mostrándose y estando operativas sin conexión."*

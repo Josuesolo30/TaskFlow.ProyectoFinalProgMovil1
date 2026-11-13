@@ -1,5 +1,6 @@
 package com.josue.taskflow.data
 
+import com.josue.taskflow.domain.model.sync.SyncStatus
 import com.josue.taskflow.domain.model.task.Task
 import com.josue.taskflow.domain.model.task.TaskOperationResult
 import com.josue.taskflow.domain.repository.task.TaskRepository
@@ -19,6 +20,7 @@ class FakeTaskRepository : TaskRepository {
 
     private val mutex = Mutex()
     private val notificationChannel = Channel<String>(Channel.BUFFERED)
+    private val syncStatus = MutableStateFlow<SyncStatus>(SyncStatus.Idle)
 
     private val tasks = MutableStateFlow(
         listOf(
@@ -37,6 +39,17 @@ class FakeTaskRepository : TaskRepository {
     override fun getTaskStream(taskId: Int): Flow<Task?> = tasks.map { list -> list.firstOrNull { it.id == taskId } }
 
     override fun getNotificationsStream(): Flow<String> = notificationChannel.receiveAsFlow()
+
+    override fun observeSyncStatus(): Flow<SyncStatus> = syncStatus.asStateFlow()
+
+    override suspend fun syncRemoteTasks() {
+        syncStatus.value = SyncStatus.Loading
+        if (shouldFail) {
+            syncStatus.value = SyncStatus.Error("Error de sincronización simulado")
+        } else {
+            syncStatus.value = SyncStatus.Success
+        }
+    }
 
     override suspend fun addTask(title: String, description: String): TaskOperationResult {
         if (shouldFail) {

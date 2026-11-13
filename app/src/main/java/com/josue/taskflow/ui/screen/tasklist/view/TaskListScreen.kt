@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.josue.taskflow.R
+import com.josue.taskflow.domain.model.sync.SyncStatus
 import com.josue.taskflow.domain.model.task.TaskFilter
 import com.josue.taskflow.domain.model.task.TaskOperationResult
 import com.josue.taskflow.ui.components.TaskCard
@@ -50,7 +51,9 @@ import com.josue.taskflow.ui.screen.tasklist.model.TaskListUiState
 fun TaskListScreen(
     uiState: TaskListUiState,
     activeFilter: TaskFilter,
+    syncStatus: SyncStatus = SyncStatus.Idle,
     onSelectFilter: (TaskFilter) -> Unit,
+    onRetrySync: () -> Unit = {},
     onAddTask: (String, String, (TaskOperationResult) -> Unit) -> Unit,
     onToggleCompletion: (Int) -> Unit,
     onDeleteTask: (Int) -> Unit,
@@ -162,6 +165,52 @@ fun TaskListScreen(
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
+            }
+
+            // Banner de estado de sincronización remota (Loading o Error con botón 'Reintentar')
+            when (syncStatus) {
+                is SyncStatus.Loading -> {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.sizeIn(maxWidth = 16.dp, maxHeight = 16.dp),
+                            strokeWidth = 2.dp
+                        )
+                        Text(
+                            text = stringResource(R.string.sync_loading),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+                is SyncStatus.Error -> {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = stringResource(R.string.sync_error_prefix, syncStatus.message),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.weight(1f)
+                        )
+                        TextButton(
+                            onClick = onRetrySync,
+                            modifier = Modifier.sizeIn(minHeight = 48.dp)
+                        ) {
+                            Text(stringResource(R.string.retry_sync_button))
+                        }
+                    }
+                }
+                else -> {}
             }
 
             when (uiState) {
