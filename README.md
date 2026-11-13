@@ -1,6 +1,6 @@
 # TaskFlow - Gestor de Tareas Personales
 
-Aplicación Android para la gestión integral de tareas personales, desarrollada con **Kotlin**, **Jetpack Compose**, **Paging 3** (paginación remota con PagingSource), **Retrofit** (consumo REST de JSONPlaceholder), **Room Database** (con migraciones manuales v1 ➔ v2 ➔ v3), **DataStore Preferences** (con migración desde SharedPreferences), **Hilt** y **Material 3 (Teal Theme)**. 
+Aplicación Android para la gestión integral de tareas personales, desarrollada con **Kotlin**, **Jetpack Compose**, **Paging 3** (paginación remota con PagingSource), **Retrofit** (consumo REST de JSONPlaceholder), **Room Database** (con migraciones manuales v1 ➔ v2 ➔ v3), **DataStore Preferences** (con migración desde SharedPreferences), **Hilt**, **JUnit 5 (Jupiter)**, **MockK** y **Material 3 (Teal Theme)**. 
 
 ---
 
@@ -72,7 +72,7 @@ app/src/main/java/com/josue/taskflow/
 
 ---
 
-## 📊 Matriz de Cumplimiento y Estado de Prácticas (Laboratorios 0 a 9)
+## 📊 Matriz de Cumplimiento y Estado de Prácticas (Laboratorios 0 a 10)
 
 | Práctica | Archivo que la implementa | Estado | Evidencia o verificación realizada |
 | :--- | :--- | :--- | :--- |
@@ -86,6 +86,7 @@ app/src/main/java/com/josue/taskflow/
 | **Migración SharedPreferences a DataStore (Lab 7)** | `di/DataStoreModule.kt` | **Completo** | `SharedPreferencesMigration` migra `filtro_tareas_activo` de `taskflow_legacy_preferences` a `user_preferences`. |
 | **Consumo de API REST con Retrofit (Lab 8)** | `data/remote/api/TaskApiService.kt`, `data/repository/task/DefaultTaskRepository.kt` | **Completo** | Consumo de `GET /todos?userId=1` de JSONPlaceholder con importación idempotente en Room. |
 | **Paginación Paging 3 y Offline-First (Lab 9)** | `data/remote/paging/TaskPagingSource.kt`, `data/repository/task/DefaultTaskRepository.kt` | **Completo** | `TaskPagingSource` con `PagingSource` de Paging 3. Room es la fuente única de verdad offline-first. |
+| **Pruebas Unitarias JUnit 5, MockK y Cobertura JaCoCo (Lab 10)** | `TaskListViewModelJupiterTest.kt` | **Completo** | Suite JUnit 5 + MockK + `runTest`. **100% de cobertura de líneas y métodos en `TaskListViewModel.kt`** vía JaCoCo. |
 
 ---
 
@@ -100,6 +101,8 @@ app/src/main/java/com/josue/taskflow/
 ## 🛠️ Tecnologías Utilizadas
 * **Kotlin 2.x** (Corrutinas, Flow, Genéricos, Varianza, Reified, Scope Functions)
 * **Hilt 2.51.1** (Inyección de dependencias)
+* **JUnit 5 Jupiter (5.10.2)**, **JUnit Vintage Engine** & **MockK (1.13.10)** (Pruebas unitarias)
+* **JaCoCo 0.8.11** (Reporte de cobertura de código HTML/XML)
 * **Paging 3 (3.3.2)** (`PagingSource`, `LoadParams`, `LoadResult`)
 * **Retrofit 2.11.0** & **kotlinx.serialization 1.7.3** (Consumo de API REST JSONPlaceholder)
 * **OkHttp 4.12.0** & **HttpLoggingInterceptor**
@@ -108,11 +111,10 @@ app/src/main/java/com/josue/taskflow/
 * **Clean Architecture & MVVM** (`Route` / `Screen` / `ViewModel` / `UiState`)
 * **Jetpack Compose & Material 3 (Teal Theme)**
 * **Navigation Compose 2.9.8**
-* **JUnit 4** & **MockWebServer** (39 pruebas unitarias e instrumentadas automatizadas)
 
 ---
 
-## 🚀 Cómo Ejecutar el Proyecto
+## 🚀 Cómo Ejecutar el Proyecto y Generar Cobertura JaCoCo
 
 1. Clonar el repositorio:
    ```bash
@@ -120,16 +122,19 @@ app/src/main/java/com/josue/taskflow/
    ```
 2. Abrir en **Android Studio**.
 3. Sincronizar Gradle.
-4. Ejecutar las pruebas unitarias:
-   ```bash
-   ./gradlew test
+4. Ejecutar todas las pruebas unitarias (JUnit 4 y JUnit 5 Jupiter) y generar el reporte JaCoCo:
+   ```powershell
+   .\gradlew.bat testDebugUnitTest jacocoTestReport
    ```
-5. Ejecutar la aplicación en el emulador o dispositivo físico.
+5. Ver el reporte de cobertura HTML en el navegador:
+   `app/build/reports/jacoco/jacocoTestReport/html/com.josue.taskflow.ui.screen.tasklist.viewmodel/TaskListViewModel.html`
 
 ---
 
 ## 📄 Documentación Adicional
-* [Documentación de Implementación de Lab 9 (Paging 3 & Offline-First)](docs/LAB9_IMPLEMENTATION.md)
+* [Reporte de Cobertura JaCoCo del Lab 10](docs/lab10/COVERAGE_REPORT.md)
+* [Documentación de Implementación de Lab 10](docs/LAB10_IMPLEMENTATION.md)
+* [Documentación de Implementación de Lab 9](docs/LAB9_IMPLEMENTATION.md)
 * [Evidencia del Lab 9](docs/LAB9_EVIDENCE.md)
 * [Documentación de Implementación de Lab 8](docs/LAB8_IMPLEMENTATION.md)
 * [Evidencia de Integración de API REST de Lab 8](docs/LAB8_EVIDENCE.md)
